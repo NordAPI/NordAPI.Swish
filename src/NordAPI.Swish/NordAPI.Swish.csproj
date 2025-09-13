@@ -4,12 +4,25 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <AssemblyName>NordAPI.Swish</AssemblyName>
+    <PackageId>NordAPI.Swish</PackageId>
+    <Description>.NET SDK for Swish (MVP) with HMAC, rate limiting and mTLS support.</Description>
+    <RepositoryType>git</RepositoryType>
+
+    <!-- NuGet README (måste ligga i paketroten) -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
     <PackageReference Include="System.Net.Http.Json" Version="9.0.8" />
+  </ItemGroup>
+
+  <!-- VIKTIGT: Använd Update (inte Include) och packa i paketroten -->
+  <ItemGroup>
+    <None Update="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

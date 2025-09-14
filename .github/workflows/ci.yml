@@ -1,4 +1,4 @@
-﻿name: .NET CI
+name: .NET CI
 
 on:
   push:
@@ -80,4 +80,3 @@ jobs:
         with:
           name: packages
           path: artifacts/*
-

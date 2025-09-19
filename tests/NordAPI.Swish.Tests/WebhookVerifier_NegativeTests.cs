@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Text;
 using FluentAssertions;
 using NordAPI.Swish.Security.Webhooks;
 using Xunit;
@@ -13,33 +15,40 @@ namespace NordAPI.Swish.Tests
             new SwishWebhookVerifier(
                 new SwishWebhookVerifierOptions
                 {
-                    SharedSecret     = Secret,
+                    SharedSecret = Secret,
                     AllowedClockSkew = TimeSpan.FromMinutes(5),
-                    MaxMessageAge    = TimeSpan.FromMinutes(10)
+                    MaxMessageAge   = TimeSpan.FromMinutes(10),
+                    SignatureHeaderName = "X-Swish-Signature",
+                    TimestampHeaderName = "X-Swish-Timestamp",
+                    NonceHeaderName     = "X-Swish-Nonce",
                 },
                 new InMemoryNonceStore()
             );
 
-        [Fact]
-        public void Verify_ShouldFail_WhenBodyIsAltered_AfterSigning()
+        private static Dictionary<string, string> MakeHeaders(
+            string secret,
+            string body,
+            DateTimeOffset ts,
+            string? nonce = null)
         {
-            var bodyOriginal = "{\"id\":\"abc123\",\"amount\":100}";
-            var bodyAltered  = "{\"id\":\"abc123\",\"amount\":999}";
-            var ts = DateTimeOffset.UtcNow;
+            var tsStr      = ts.ToUniversalTime().ToString("o");
+            var finalNonce = nonce ?? Guid.NewGuid().ToString("N");
+            var message    = $"{tsStr}\n{finalNonce}\n{body}";
+            var key        = Encoding.UTF8.GetBytes(secret);
+            using var hmac = new System.Security.Cryptography.HMACSHA256(key);
+            var sig        = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(message)));
 
-            var (headers, _) = TestSigning.MakeHeaders(Secret, bodyOriginal, ts);
-            var verifier = CreateVerifier();
+            // Lägger både primära och alias för att kunna testa borttagning av båda
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["X-Swish-Timestamp"] = tsStr,
+                ["X-Swish-Nonce"]     = finalNonce,
+                ["X-Swish-Signature"] = sig,
 
-            var result = verifier.Verify(bodyAltered, headers, ts);
-
-            result.Success.Should().BeFalse();
-            result.Reason.Should().NotBeNull();
-
-            // Tillåt både svenska och engelska felmeddelanden
-            result.Reason!
-                .ToLowerInvariant()
-                .Should()
-                .ContainAny("signatur", "mismatch", "signature", "invalid");
+                ["X-Timestamp"] = tsStr,
+                ["X-Nonce"]     = finalNonce,
+                ["X-Signature"] = sig
+            };
         }
 
         [Fact]
@@ -48,19 +57,29 @@ namespace NordAPI.Swish.Tests
             var body = "{\"id\":\"abc123\",\"amount\":100}";
             var ts   = DateTimeOffset.UtcNow;
 
-            var (wrongHeaders, _) = TestSigning.MakeHeaders("WRONG_SECRET", body, ts);
+            var hdrs = MakeHeaders("WRONG_SECRET", body, ts); // fel hemlighet
             var verifier = CreateVerifier();
 
-            var result = verifier.Verify(body, wrongHeaders, ts);
+            var result = verifier.Verify(body, hdrs, ts);
 
             result.Success.Should().BeFalse();
-            result.Reason.Should().NotBeNull();
+            result.Reason!.ToLowerInvariant().Should().ContainAny("signatur", "signature", "mismatch", "invalid");
+        }
 
-            // Tillåt både svenska och engelska felmeddelanden
-            result.Reason!
-                .ToLowerInvariant()
-                .Should()
-                .ContainAny("signatur", "mismatch", "signature", "invalid");
+        [Fact]
+        public void Verify_ShouldFail_WhenBodyIsAltered_AfterSigning()
+        {
+            var bodyOriginal = "{\"id\":\"abc123\",\"amount\":100}";
+            var bodyAltered  = "{\"id\":\"abc123\",\"amount\":999}";
+            var ts = DateTimeOffset.UtcNow;
+
+            var hdrs = MakeHeaders(Secret, bodyOriginal, ts);
+            var verifier = CreateVerifier();
+
+            var result = verifier.Verify(bodyAltered, hdrs, ts);
+
+            result.Success.Should().BeFalse();
+            result.Reason!.ToLowerInvariant().Should().ContainAny("signatur", "signature", "mismatch", "invalid");
         }
 
         [Fact]
@@ -69,21 +88,17 @@ namespace NordAPI.Swish.Tests
             var body = "{\"id\":\"abc123\",\"amount\":100}";
             var ts   = DateTimeOffset.UtcNow;
 
-            var (headers, _) = TestSigning.MakeHeaders(Secret, body, ts);
-            headers.Remove("X-Swish-Signature");
+            var hdrs = MakeHeaders(Secret, body, ts);
+
+            // Ta bort signatur helt (både primär och alias)
+            hdrs.Remove("X-Swish-Signature");
+            hdrs.Remove("X-Signature");
 
             var verifier = CreateVerifier();
-
-            var result = verifier.Verify(body, headers, ts);
+            var result = verifier.Verify(body, hdrs, ts);
 
             result.Success.Should().BeFalse();
-            result.Reason.Should().NotBeNull();
-
-            // Tillåt både svenska och engelska felmeddelanden
-            result.Reason!
-                .ToLowerInvariant()
-                .Should()
-                .ContainAny("header", "saknas", "missing", "signature");
+            result.Reason!.ToLowerInvariant().Should().ContainAny("saknar", "missing", "signatur", "signature");
         }
     }
 }

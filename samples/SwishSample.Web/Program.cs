@@ -165,34 +165,37 @@ app.MapPost("/webhook/swish", async (
 
 app.Run();
 
+
 /// <summary>
 /// Accepterar Unix sekunder/millis och ISO-8601 (UTC).
 /// </summary>
 static bool TryParseTimestamp(string tsHeader, out DateTimeOffset ts)
 {
-    // Heltal? → sekunder/millis
-    if (long.TryParse(tsHeader, out var num))
+  // Heltal? → sekunder/millis
+  if (long.TryParse(tsHeader, out var num))
+  {
+    if (tsHeader.Length >= 13)
     {
-        if (tsHeader.Length >= 13)
-        {
-            ts = DateTimeOffset.FromUnixTimeMilliseconds(num).ToUniversalTime();
-            return true;
-        }
-        ts = DateTimeOffset.FromUnixTimeSeconds(num).ToUniversalTime();
-        return true;
+      ts = DateTimeOffset.FromUnixTimeMilliseconds(num).ToUniversalTime();
+      return true;
     }
+    ts = DateTimeOffset.FromUnixTimeSeconds(num).ToUniversalTime();
+    return true;
+  }
 
-    // ISO-8601
-    if (DateTimeOffset.TryParse(
-            tsHeader,
-            CultureInfo.InvariantCulture,
-            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal,
-            out var parsed))
-    {
-        ts = parsed.ToUniversalTime();
-        return true;
-    }
+  // ISO-8601
+  if (DateTimeOffset.TryParse(
+          tsHeader,
+          CultureInfo.InvariantCulture,
+          DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal,
+          out var parsed))
+  {
+    ts = parsed.ToUniversalTime();
+    return true;
+  }
 
-    ts = default;
-    return false;
+  ts = default;
+  return false;
 }
+public partial class Program { }
+

@@ -29,8 +29,13 @@
     <Version>1.0.2</Version>
   </PropertyGroup>
 
-  <!-- Tysta CS1591-varningar i Debug globalt (lämna dem i Release/CI) -->
+  <!-- Tysta CS1591-varningar i Debug -->
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!-- Tysta CS1591-varningar i Release (tillfälligt för MVP) -->
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 </Project>

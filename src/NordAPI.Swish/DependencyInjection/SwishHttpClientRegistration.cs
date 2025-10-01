@@ -1,12 +1,11 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NordAPI.Swish.Security.Http;
-using System.Security.Cryptography; // <-- behövs för CryptographicException
-
 
 namespace NordAPI.Swish.DependencyInjection
 {
@@ -30,6 +29,7 @@ namespace NordAPI.Swish.DependencyInjection
                     var allowInvalid = false;  // strict in Release
 #endif
                     var cert = TryLoadCertificateFromEnv(sp, allowInvalid);
+
                     return cert is null
                         ? new HttpClientHandler()
                         : new MtlsHttpHandler(cert, allowInvalid);
@@ -73,14 +73,16 @@ namespace NordAPI.Swish.DependencyInjection
 
                     var raw = File.ReadAllBytes(pfxPath);
                     cert = new X509Certificate2(raw, pfxPass, X509KeyStorageFlags.EphemeralKeySet);
-                    logger?.LogInformation("Loaded Swish client certificate from path {Path}, subject {Subject}, expires {NotAfter:u}.",
+                    logger?.LogInformation(
+                        "Loaded Swish client certificate from path {Path}, subject {Subject}, expires {NotAfter:u}.",
                         pfxPath, cert.Subject, cert.NotAfter);
                 }
                 else
                 {
                     var raw = Convert.FromBase64String(pfxBase64!);
                     cert = new X509Certificate2(raw, pfxPass, X509KeyStorageFlags.EphemeralKeySet);
-                    logger?.LogInformation("Loaded Swish client certificate from Base64, subject {Subject}, expires {NotAfter:u}.",
+                    logger?.LogInformation(
+                        "Loaded Swish client certificate from Base64, subject {Subject}, expires {NotAfter:u}.",
                         cert.Subject, cert.NotAfter);
                 }
 
@@ -108,4 +110,5 @@ namespace NordAPI.Swish.DependencyInjection
         }
     }
 }
+
 

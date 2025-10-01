@@ -159,6 +159,52 @@ dotnet test
 dotnet watch --project samples/SwishSample.Web run
 ```
 
+---
+
+## HTTP timeout & retry (named client **"Swish"**)
+
+The SDK provides an **opt-in** named HttpClient `"Swish"` with:
+- **Timeout:** `30s` (`HttpClient.Timeout`)
+- **Retry policy:** up to **3** retries with exponential backoff + jitter  
+  Retries on: **408**, **429**, **5xx**, **HttpRequestException**, **TaskCanceledException** (timeout)
+
+**When it applies**
+- Register the pipeline via:
+  - `services.AddSwishHttpClient()` (SDK extension), or
+  - In the sample: set `SWISH_USE_NAMED_CLIENT=1` (which calls the extension).
+- If you do **not** call `AddSwishHttpClient()`, you’ll get the default pipeline (no custom retry, default .NET timeout).
+
+**mTLS (optional)**
+- Add a client cert when env vars are present:
+  - `SWISH_PFX_PATH` **or** `SWISH_PFX_BASE64`  
+  - and `SWISH_PFX_PASSWORD` **or** `SWISH_PFX_PASS`
+- DEBUG allows relaxed chain (dev only). Release is strict.
+
+**Override / extend**
+- You can add more handlers around the named client (outermost are added last):
+```csharp
+services.AddSwishHttpClient(); // registers "Swish" with timeout+retry(+mTLS if env)
+services.AddHttpClient("Swish")
+        .AddHttpMessageHandler(_ => new MyCustomHandler()); // sits outside SDK retry
+```
+**Disable**
+
+- Don’t call AddSwishHttpClient() (the SDK will use the plain default pipeline).
+
+- Or re-register "Swish" yourself to replace/override handlers and timeout.
+
+## Quick check (sample)
+
+```powershell
+$env:SWISH_USE_NAMED_CLIENT="1"
+# optional mTLS
+$env:SWISH_PFX_PATH="C:\path\client.pfx"
+$env:SWISH_PFX_PASSWORD="secret"
+
+dotnet run --project .\samples\SwishSample.Web\SwishSample.Web.csproj
+```
+
+---
 
 
 

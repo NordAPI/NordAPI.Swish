@@ -1,8 +1,10 @@
+// src/NordAPI.Swish/DependencyInjection/SwishServiceCollectionExtensions.cs
 using System;
 using System.Net.Http;
-using System.Net.Security; // for SslPolicyErrors
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Http;
 using NordAPI.Swish.Security.Http;
 using Polly;
 using Polly.Extensions.Http;
@@ -11,6 +13,16 @@ namespace NordAPI.Swish.DependencyInjection;
 
 public static class SwishServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers ISwishClient using HttpClientFactory.
+    ///
+    /// Pipeline (inner → outer):
+    ///   RateLimitingHandler → HmacSigningHandler → …(any test/host handlers) → Polly retry (outermost)
+    ///
+    /// Primary handler:
+    ///   Assigned by a preserving IHttpMessageHandlerBuilderFilter that only sets a Primary
+    ///   if tests/host did not already provide one. mTLS via explicit cert or env; plain fallback.
+    /// </summary>
     public static IServiceCollection AddSwishClient(
         this IServiceCollection services,
         Action<SwishOptions> configure,
@@ -29,10 +41,9 @@ public static class SwishServiceCollectionExtensions
         if (string.IsNullOrWhiteSpace(opts.Secret))
             throw new InvalidOperationException("SwishOptions.Secret must be set.");
 
-        // Expose options to SwishClient ctor
         services.AddSingleton(opts);
 
-        // Polly: retry on 5xx/408/HttpRequestException
+        // OUTERMOST retry policy.
         var retryPolicy = HttpPolicyExtensions
             .HandleTransientHttpError()
             .WaitAndRetryAsync(new[]
@@ -42,46 +53,50 @@ public static class SwishServiceCollectionExtensions
                 TimeSpan.FromMilliseconds(400),
             });
 
+        // Primary factory: explicit cert wins; else env/fallback.
+        Func<HttpMessageHandler> primaryFactory = () =>
+        {
+            if (clientCertificate is not null)
+            {
+                var h = new SocketsHttpHandler();
+                h.SslOptions.ClientCertificates = new X509CertificateCollection { clientCertificate };
+#if DEBUG
+                // DEV ONLY: relaxed server validation in Debug; NEVER in Release.
+                h.SslOptions.RemoteCertificateValidationCallback = static (_, _, _, _) => true;
+#endif
+                return h;
+            }
+
+            // Env-controlled (SWISH_PFX_PATH + SWISH_PFX_PASS) or plain if missing.
+            return SwishMtlsHandlerFactory.Create();
+        };
+
+        // Ensure the Primary-preserving filter is registered once.
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IHttpMessageHandlerBuilderFilter>(
+                new SwishPrimaryPreservingFilter(primaryFactory)));
+
         services
             .AddHttpClient<ISwishClient, SwishClient>("Swish", (_, client) =>
             {
                 client.BaseAddress = opts.BaseAddress!;
             })
-            // Inner delegating handlers
+            // Inner handlers (built inner → outer; retry added last = outermost)
             .AddHttpMessageHandler(() =>
-                new RateLimitingHandler(maxConcurrency: 4, minDelayBetweenCalls: TimeSpan.FromMilliseconds(100)))
+                new RateLimitingHandler(
+                    maxConcurrency: 4,
+                    minDelayBetweenCalls: TimeSpan.FromMilliseconds(100)))
             .AddHttpMessageHandler(() =>
                 new HmacSigningHandler(opts.ApiKey!, opts.Secret!))
-            // Outermost: Polly retry
-            .AddPolicyHandler(retryPolicy)
-#pragma warning disable CS0618
-            // Respect a primary set by tests/host; otherwise set our own (mTLS or fallback)
-            .ConfigureHttpMessageHandlerBuilder(builder =>
-            {
-                if (builder.PrimaryHandler is not null)
-                    return; // do not override test/host-provided primary
-
-                if (clientCertificate is not null)
-                {
-                    var h = new SocketsHttpHandler();
-                    h.SslOptions.ClientCertificates = new X509CertificateCollection { clientCertificate };
-#if DEBUG
-                    // DEV ONLY: relaxed validation in Debug; never in Release.
-                    h.SslOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true;
-#endif
-                    builder.PrimaryHandler = h;
-                    return;
-                }
-
-                // Env-controlled factory (mTLS if SWISH_PFX_PATH + SWISH_PFX_PASS; fallback otherwise)
-                builder.PrimaryHandler = SwishMtlsHandlerFactory.Create();
-            })
-#pragma warning restore CS0618
-            ;
+            // OUTERMOST: retry
+            .AddPolicyHandler(retryPolicy);
 
         return services;
     }
 }
+
+
+
 
 
 

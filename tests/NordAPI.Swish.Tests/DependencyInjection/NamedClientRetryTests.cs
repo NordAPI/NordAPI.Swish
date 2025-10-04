@@ -8,50 +8,50 @@ using Microsoft.Extensions.Logging;
 using Xunit;
 using NordAPI.Swish.DependencyInjection;
 
-
 namespace NordAPI.Swish.Tests.DependencyInjection
 {
     /// <summary>
-    /// Verifierar att den namngivna klienten "Swish" gÃ¶r retry pÃ¥ transienta fel.
-    /// Testet injicerar en "sequence handler" som returnerar 500 (fÃ¶rsta gÃ¥ngen)
-    /// och 200 (andra gÃ¥ngen). Vi fÃ¶rvÃ¤ntar oss att slutresultatet blir 200
-    /// och att minst 2 fÃ¶rsÃ¶k har gjorts.
+    /// Verifies that the named client "Swish" retries on transient errors.
+    /// The test injects a sequence handler that returns 500 first, then 200.
+    /// Expected: final result is 200 (OK) and at least 2 attempts are made.
     /// </summary>
     public class NamedClientRetryTests
     {
         [Fact]
         public async Task SwishClient_Retries_On_Transient_5xx_Then_Succeeds()
         {
-            // SÃ¤kerstÃ¤ll att mTLS inte triggas i test, sÃ¥ att pipen byggs utan cert.
-            Environment.SetEnvironmentVariable("SWISH_PFX_PATH",    null);
-            Environment.SetEnvironmentVariable("SWISH_PFX_BASE64",  null);
+            // Ensure mTLS is disabled in test so pipeline builds without certs.
+            Environment.SetEnvironmentVariable("SWISH_PFX_PATH", null);
+            Environment.SetEnvironmentVariable("SWISH_PFX_BASE64", null);
             Environment.SetEnvironmentVariable("SWISH_PFX_PASSWORD", null);
-            Environment.SetEnvironmentVariable("SWISH_PFX_PASS",     null);
+            Environment.SetEnvironmentVariable("SWISH_PFX_PASS", null);
 
             var services = new ServiceCollection();
             services.AddLogging(b => b.AddDebug().AddConsole());
 
-            // Registrera namngiven klient "Swish" via SDK:t
+            // Register transport pipeline (includes Polly retry outermost).
             services.AddSwishMtlsTransport();
 
-            // LÃ¤gg till en ytterligare handler Ã¶verst i pipen som simulerar svar:
-            // 1) 500  â†’  2) 200
+            // Sequence: first call -> 500, second call -> 200.
             var seq = new SequenceHandler(
-                new HttpResponseMessage(HttpStatusCode.InternalServerError) { Content = new StringContent("boom") },
-                new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("ok") }
+                new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent("boom")
+                },
+                new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("ok")
+                }
             );
 
-            // OBS: Att anropa AddHttpClient("Swish") igen kompletterar existerande pipeline
-            // fÃ¶r samma namn i HttpClientFactory (lÃ¤gger handlers Ã¶verst/ytterst).
+            // Important: set SequenceHandler as PRIMARY, so Polly (delegating) wraps it.
             services.AddHttpClient("Swish")
                     .ConfigurePrimaryHttpMessageHandler(_ => seq);
 
-
             using var sp = services.BuildServiceProvider();
             var factory = sp.GetRequiredService<IHttpClientFactory>();
-            var client  = factory.CreateClient("Swish");
+            var client = factory.CreateClient("Swish");
 
-            // Absolut URL sÃ¥ vi slipper BaseAddress-konfig
             var res = await client.GetAsync("http://unit.test/ping");
 
             Assert.Equal(HttpStatusCode.OK, res.StatusCode);
@@ -59,8 +59,8 @@ namespace NordAPI.Swish.Tests.DependencyInjection
         }
 
         /// <summary>
-        /// En enkel delegating handler som returnerar en fÃ¶rbestÃ¤md sekvens av svar.
-        /// NÃ¤r sekvensen Ã¤r slut returneras sista svaret fÃ¶r resterande anrop.
+        /// A delegating handler that returns a predefined sequence of responses.
+        /// After the sequence is exhausted, the last response is reused.
         /// </summary>
         private sealed class SequenceHandler : DelegatingHandler
         {
@@ -80,18 +80,13 @@ namespace NordAPI.Swish.Tests.DependencyInjection
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
                 var next = Interlocked.Increment(ref _index);
-
-                // Om vi har fler definierade svar: anvÃ¤nd nÃ¤sta, annars Ã¥teranvÃ¤nd sista.
                 var i = next < _responses.Length ? next : _responses.Length - 1;
-
-                // Viktigt: kopiera inte responsen; lÃ¥t testet vara enkelt.
                 return Task.FromResult(CloneIfConsumed(_responses[i]));
             }
 
             private static HttpResponseMessage CloneIfConsumed(HttpResponseMessage original)
             {
-                // FÃ¶r enkelhet: skapa en ny response som speglar status + enkel text.
-                // (Att Ã¥teranvÃ¤nda samma HttpResponseMessage flera gÃ¥nger Ã¤r inte sÃ¤kert.)
+                // Clone status + simple text body (reuse of HttpResponseMessage is unsafe).
                 var text = original.Content is null ? "" : original.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 var clone = new HttpResponseMessage(original.StatusCode)
                 {
@@ -100,10 +95,11 @@ namespace NordAPI.Swish.Tests.DependencyInjection
                 };
                 foreach (var header in original.Headers)
                     clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
-
                 return clone;
             }
         }
     }
 }
+
+
 

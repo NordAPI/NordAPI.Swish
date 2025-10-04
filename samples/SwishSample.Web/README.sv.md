@@ -36,6 +36,11 @@ $env:SWISH_ALLOW_OLD_TS       = "1"
 $env:SWISH_REQUIRE_NONCE      = "0"
 $env:SWISH_NONCE_TTL_SECONDS  = "600"
 ```
+
+🔒 OBS! SWISH_WEBHOOK_SECRET="dev_secret" får endast användas för lokal utveckling.
+I test- och produktionsmiljöer ska du sätta ett riktigt hemligt värde via
+miljövariabler eller KeyVault – aldrig hårdkoda eller committa det i repo
+
 ---
 
 ## Starta servern
@@ -89,6 +94,17 @@ $uri  = "http://localhost:5287/webhook/swish"
   -d $bodyJson
   ```
 
+  ### Webhook-beteende
+
+När webhooken tar emot en giltig nyttolast svarar den med:
+
+```json
+{ ”received”: true }
+
+- Om en repris eller ogiltig signatur upptäcks svarar den med:
+{ ”error”: ”unauthorized” }
+```
+
 ---
 
 ## QuickStart
@@ -96,7 +112,6 @@ $uri  = "http://localhost:5287/webhook/swish"
 git clone https://github.com/NordAPI/NordAPI.SwishSdk.git
 cd NordAPI.SwishSdk
 ```
-
 
 # Ställ in miljövariabler
 ```powershell
@@ -142,14 +157,15 @@ $uri  = "http://localhost:5287/webhook/swish"
 
 ### Named client (optional)
 
-Set `SWISH_USE_NAMED_CLIENT=1` in the sample to register the named HttpClient **"Swish"**.
-If `SWISH_PFX_PATH` or `SWISH_PFX_BASE64` **and** `SWISH_PFX_PASSWORD|PASS` are set, the SDK will attach a client certificate via its `MtlsHttpHandler`.
+Sätt `SWISH_USE_NAMED_CLIENT=1` i exemplet för att registrera den namngivna HttpClienten "Swish".
+Om `SWISH_PFX_PATH` eller `SWISH_PFX_BASE64` och `SWISH_PFX_PASSWORD|PASS` är satta, kommer SDK:t att bifoga ett klientcertifikat via sin `MtlsHttpHandler`.
 
-- **Default/dev:** No env → unchanged behavior (no mTLS).
-- **Opt-in:** `SWISH_USE_NAMED_CLIENT=1` + cert envs → named pipeline with mTLS is used.
-- **Security:** Relaxed chain is **DEBUG-only**; **Release** is strict. Never commit certs/keys; use env/KeyVault.
+- **Standard/dev:** Ingen miljövariabel → oförändrat beteende (ingen mTLS).
+- **Valbart:** - `SWISH_USE_NAMED_CLIENT=1` + cert-variabler → namngiven pipeline med mTLS används.
+- **Säkerhet:** - Avslappnad certifikatkedja gäller endast i `DEBUG`; `Release` är strikt. Committa aldrig certifikat/nycklar; använd miljövariabler eller `KeyVault`.
 
-Example (PowerShell):
+
+Exempel (PowerShell):
 ```powershell
 $env:SWISH_USE_NAMED_CLIENT="1"
 $env:SWISH_PFX_PATH="C:\path\client.pfx"
@@ -159,9 +175,9 @@ dotnet run --project .\samples\SwishSample.Web\SwishSample.Web.csproj
 
 ---
 
-### Environment selection for BaseAddress
+### Val av miljö för BaseAddress
 
-The sample chooses the Swish base URL from environment variables:
+Exemplet väljer Swish-basadressen från miljövariabler:
 
 1. `SWISH_BASE_URL` (absolute override, if set)
 2. `SWISH_ENV=TEST|PROD`:
@@ -169,14 +185,15 @@ The sample chooses the Swish base URL from environment variables:
    - `SWISH_BASE_URL_PROD` when `SWISH_ENV=PROD`
 3. Fallback: `https://example.invalid`
 
-On startup, the sample logs the chosen environment and URL:
+
+Vid uppstart loggar exemplet vald miljö och URL:
 ```
 [Swish] Environment: 'TEST' | BaseAddress: https://your-test-url
 ```
 
-**Examples (PowerShell):**
+**Exempel (PowerShell):**
 ```powershell
-# Dev default (fallback)
+# Dev-standard (fallback)
 dotnet run --project .\samples\SwishSample.Web\SwishSample.Web.csproj
 
 # TEST
@@ -189,7 +206,29 @@ $env:SWISH_ENV="PROD"
 $env:SWISH_BASE_URL_PROD="https://your-prod-url"
 dotnet run --project .\samples\SwishSample.Web\SwishSample.Web.csproj
 
-# Absolute override
+# Absolut överskrivning
 $env:SWISH_BASE_URL="https://override.example"
 dotnet run --project .\samples\SwishSample.Web\SwishSample.Web.csproj
 ```
+---
+
+## Felsökning
+
+- Vanliga problem och hur du löser dem när du kör eller testar webhooken lokalt.
+
+| Problem | Orsak | Lösning |
+|----------|--------|-----------|
+| `401 Obehörig (replay-detected)` | Samma nonce återanvänds | Generera en ny GUID för `$nonce` innan du försöker igen |
+| `401 Ogiltig signatur` | Kanonisk sträng eller hemlighetsmismatch | Jämför ditt kanoniska meddelande med serverloggen och beräkna HMAC på nytt |
+| `400 Saknad rubrik` | En eller flera Swish-rubriker saknas | Se till att `X-Swish-Timestamp`, `X-Swish-Nonce` och `X-Swish-Signature` finns |
+| Servern startar inte | Porten används redan | Stoppa alla tidigare `dotnet run`-instanser eller ändra porten |
+
+---
+
+## Se även
+
+- [NordAPI.Swish SDK – Huvudsaklig README](../../src/NordAPI.Swish/README.md)
+- [Projektarkiv på GitHub](https://github.com/NordAPI/NordAPI.SwishSdk)
+
+
+---

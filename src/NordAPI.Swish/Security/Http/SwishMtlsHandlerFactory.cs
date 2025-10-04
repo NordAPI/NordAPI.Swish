@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -7,12 +6,14 @@ using System.Security.Cryptography.X509Certificates;
 namespace NordAPI.Swish.Security.Http
 {
     /// <summary>
-    /// Creates the primary HttpMessageHandler used for Swish calls.
-    /// If SWISH_PFX_PATH + SWISH_PFX_PASS are set, attaches the client certificate (mTLS).
-    /// Otherwise returns a plain SocketsHttpHandler (no mTLS).
-    /// In DEBUG only, a permissive server validation is used. Never in Release.
+    /// Builds the primary HttpMessageHandler used by Swish clients.
+    /// - If SWISH_PFX_PATH + SWISH_PFX_PASS are set -> mTLS enabled with that certificate.
+    /// - Otherwise -> plain SocketsHttpHandler (no client certificate).
+    ///
+    /// DEBUG: relaxed server certificate validation (for local/dev only).
+    /// RELEASE: strict default validation (no bypass).
     /// </summary>
-    internal static class SwishMtlsHandlerFactory
+    public static class SwishMtlsHandlerFactory
     {
         public static HttpMessageHandler Create()
         {
@@ -21,18 +22,25 @@ namespace NordAPI.Swish.Security.Http
 
             var handler = new SocketsHttpHandler();
 
-            if (!string.IsNullOrWhiteSpace(pfxPath) &&
-                !string.IsNullOrWhiteSpace(pfxPass) &&
-                File.Exists(pfxPath))
+            // DEBUG: dev convenience (never in Release)
+#if DEBUG
+            handler.SslOptions.RemoteCertificateValidationCallback = static (_, __, ___, ____) => true;
+#endif
+
+            if (!string.IsNullOrWhiteSpace(pfxPath) && !string.IsNullOrWhiteSpace(pfxPass))
             {
-                var cert = new X509Certificate2(pfxPath, pfxPass, X509KeyStorageFlags.EphemeralKeySet);
-                handler.SslOptions.ClientCertificates = new X509CertificateCollection { cert };
+                // Load PFX from disk (do NOT commit certs to the repo!)
+                var clientCert = new X509Certificate2(
+                    pfxPath,
+                    pfxPass,
+                    X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.EphemeralKeySet);
+
+                handler.SslOptions.ClientCertificates ??= new X509CertificateCollection();
+                handler.SslOptions.ClientCertificates.Add(clientCert);
             }
 
-#if DEBUG
-            handler.SslOptions.RemoteCertificateValidationCallback = static (_, _, _, _) => true;
-#endif
             return handler;
         }
     }
 }
+

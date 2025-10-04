@@ -206,5 +206,18 @@ dotnet run --project .\samples\SwishSample.Web\SwishSample.Web.csproj
 
 ---
 
+## mTLS via miljövariabler (för SDK)
+
+SDK:t kan ladda klientcertifikat för mTLS om miljövariablerna är satta:
+
+- `SWISH_PFX_PATH` → sökväg till PFX-filen
+- `SWISH_PFX_PASS` → lösenord till PFX-filen
+
+Om dessa inte är satta används fallback utan mTLS.  
+I DEBUG tillåts enklare utvecklarvalidering, i RELEASE krävs en strikt certkedja.
+
+
+---
+
 
 

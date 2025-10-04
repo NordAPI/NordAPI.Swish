@@ -1,30 +1,36 @@
-﻿# Normalize line endings by default
-* text=auto
+﻿# Normalize line endings in repo (LF), checkout native for each OS
+*         text=auto
 
-# Windows-friendly text files (CRLF in working tree)
-*.sln      text eol=crlf
-*.cs       text eol=crlf
-*.csproj   text eol=crlf
-*.props    text eol=crlf
-*.targets  text eol=crlf
-*.bat      text eol=crlf
-*.ps1      text eol=crlf
+# Windows scripts
+*.ps1     text eol=crlf
+*.bat     text eol=crlf
 
-# Unix scripts (LF)
-*.sh       text eol=lf
-*.bash     text eol=lf
+# C# / MSBuild projects (normalize, don't force CRLF in repo)
+*.cs      text
+*.csproj  text
+*.sln     text
+*.props   text
+*.targets text
 
-# GitHub Actions & CI configs (LF)
-*.yml      text eol=lf
-*.yaml     text eol=lf
+# Unix shell scripts
+*.sh      text eol=lf
+*.bash    text eol=lf
+
+# GitHub Actions / CI configs
+*.yml     text eol=lf
+*.yaml    text eol=lf
 .github/** text eol=lf
 
-# Keep binaries untouched
-*.png      binary
-*.jpg      binary
-*.jpeg     binary
-*.gif      binary
-*.pdf      binary
-*.pfx      binary
-*.cer      binary
+# Binary / secrets (never touched)
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.pdf     binary
+*.pfx     binary
+*.p12     binary
+*.pem     binary
+*.cer     binary
+*.crt     binary
+*.key     binary
 

@@ -6,44 +6,51 @@ using System.Threading.Tasks;
 namespace NordAPI.Swish.Webhooks;
 
 /// <summary>
-/// In-memory nonce store with TTL + periodic scavenging. Thread-safe.
-/// For multi-instance production, replace with Redis/DB.
+/// Default in-memory implementation of <see cref="ISwishNonceStore"/>.
+/// Used for local development or single-instance deployments.
 /// </summary>
-public sealed class InMemoryNonceStore : ISwishNonceStore, IDisposable
+/// <remarks>
+/// Nonces are kept in memory until their expiration time.
+/// This implementation is not distributed and will reset on application restart.
+/// </remarks>
+public sealed class InMemoryNonceStore : ISwishNonceStore
 {
-    private readonly ConcurrentDictionary<string, DateTimeOffset> _seen = new();
-    private readonly Timer _timer;
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _nonces = new();
 
-    public InMemoryNonceStore(TimeSpan? scavengeInterval = null)
+    /// <summary>
+    /// Creates a new in-memory nonce store.
+    /// </summary>
+    public InMemoryNonceStore()
     {
-        var interval = scavengeInterval ?? TimeSpan.FromMinutes(5);
-        _timer = new Timer(_ => Scavenge(), null, interval, interval);
     }
 
+    /// <summary>
+    /// Compatibility constructor. Accepts an unused parameter for backward compatibility with samples.
+    /// </summary>
+    /// <param name="_">Ignored parameter.</param>
+    public InMemoryNonceStore(object? _)
+    {
+    }
+
+    /// <inheritdoc />
     public Task<bool> TryRememberAsync(string nonce, DateTimeOffset expiresAtUtc, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(nonce))
-            return Task.FromResult(false);
+        ct.ThrowIfCancellationRequested();
 
+        // Clean up expired entries opportunistically
         var now = DateTimeOffset.UtcNow;
-
-        // exists and not expired -> replay
-        if (_seen.TryGetValue(nonce, out var existing) && existing > now)
-            return Task.FromResult(false);
-
-        _seen[nonce] = expiresAtUtc;
-        return Task.FromResult(true);
-    }
-
-    private void Scavenge()
-    {
-        var now = DateTimeOffset.UtcNow;
-        foreach (var kv in _seen)
+        foreach (var kvp in _nonces)
         {
-            if (kv.Value <= now)
-                _seen.TryRemove(kv.Key, out _);
+            if (kvp.Value <= now)
+                _nonces.TryRemove(kvp.Key, out _);
         }
-    }
 
-    public void Dispose() => _timer.Dispose();
+        // Try to add the nonce if not seen or not expired
+        if (expiresAtUtc <= now)
+            return Task.FromResult(false);
+
+        var added = _nonces.TryAdd(nonce, expiresAtUtc);
+        return Task.FromResult(added);
+    }
 }
+

@@ -1,48 +1,48 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using StackExchange.Redis;
 
-namespace NordAPI.Swish.Webhooks;
-
-public sealed class RedisNonceStore : ISwishNonceStore, IDisposable
+namespace NordAPI.Swish.Webhooks
 {
-    private readonly IConnectionMultiplexer _mux;
-    private readonly string _prefix;
-
-    // connectionString exempel: "localhost:6379"
-    public RedisNonceStore(string connectionString, string prefix = "swish:nonce:")
+    public sealed class RedisNonceStore : ISwishNonceStore
     {
-        _mux = ConnectionMultiplexer.Connect(connectionString);
-        _prefix = prefix;
-    }
+        private readonly IDatabase _db;
+        private readonly string _keyPrefix;
+        private static readonly TimeSpan MaxTtl = TimeSpan.FromDays(7);
 
-    // Alternativ konstruktor om du vill DI:a in multiplexer
-    public RedisNonceStore(IConnectionMultiplexer mux, string prefix = "swish:nonce:")
-    {
-        _mux = mux ?? throw new ArgumentNullException(nameof(mux));
-        _prefix = prefix;
-    }
+        public RedisNonceStore(IConnectionMultiplexer mux, string keyPrefix = "swish:nonce:")
+        {
+            if (mux is null) throw new ArgumentNullException(nameof(mux));
+            _db = mux.GetDatabase();
+            _keyPrefix = string.IsNullOrWhiteSpace(keyPrefix) ? "swish:nonce:" : keyPrefix;
+        }
 
-    public async Task<bool> TryRememberAsync(string nonce, DateTimeOffset expiresAtUtc, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(nonce))
-            return false;
+        private static TimeSpan ComputeTtl(DateTimeOffset expiresAtUtc)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var ttl = expiresAtUtc.ToUniversalTime() - now;
+            if (ttl < TimeSpan.Zero) ttl = TimeSpan.Zero;
+            if (ttl > MaxTtl) ttl = MaxTtl;
+            return ttl;
+        }
 
-        var ttl = expiresAtUtc - DateTimeOffset.UtcNow;
-        if (ttl <= TimeSpan.Zero)
-            return false;
+        private string K(string nonce) => _keyPrefix + nonce;
 
-        var db = _mux.GetDatabase();
-        var key = _prefix + nonce;
+        public async Task<bool> TryRememberAsync(string nonce, DateTimeOffset expiresAtUtc, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(nonce))
+                throw new ArgumentException("Nonce cannot be null or empty.", nameof(nonce));
 
-        // Sätt nyckeln endast om den inte finns (NX) och med expiry = ttl.
-        // true => ny (OK). false => fanns redan (replay).
-        return await db.StringSetAsync(key, "1", ttl, When.NotExists);
-    }
+            var ttl = ComputeTtl(expiresAtUtc);
+            var added = await _db.StringSetAsync(
+                key: K(nonce),
+                value: DateTimeOffset.UtcNow.ToString("O"),
+                expiry: ttl,
+                when: When.NotExists
+            ).ConfigureAwait(false);
 
-    public void Dispose()
-    {
-        if (_mux is ConnectionMultiplexer cm) cm.Dispose();
+            return added;
+        }
     }
 }

@@ -2,24 +2,45 @@
 
 namespace NordAPI.Swish.Webhooks;
 
+/// <summary>
+/// Configuration options for <see cref="SwishWebhookVerifier"/>.
+/// Controls timestamp tolerance, nonce lifetime, and header names.
+/// </summary>
 public sealed class SwishWebhookVerifierOptions
 {
-    /// <summary>Delad hemlighet för HMAC-signaturen.</summary>
+    /// <summary>
+    /// The shared secret used for computing and verifying the HMAC signature.
+    /// </summary>
     public string SharedSecret { get; set; } = string.Empty;
 
-    /// <summary>Maximal klock-avvikelse som tolereras.</summary>
+    /// <summary>
+    /// The maximum allowed clock skew between sender and receiver.
+    /// Default is ±5 minutes.
+    /// </summary>
     public TimeSpan AllowedClockSkew { get; set; } = TimeSpan.FromMinutes(5);
 
-    /// <summary>Maximal ålder på meddelandet.</summary>
-    public TimeSpan MaxMessageAge { get; set; } = TimeSpan.FromMinutes(10);
+    /// <summary>
+    /// The maximum age a webhook message is accepted for.
+    /// Default is 5 minutes.
+    /// </summary>
+    public TimeSpan MaxMessageAge { get; set; } = TimeSpan.FromMinutes(5);
 
-    /// <summary>Namn på header som innehåller signaturen (Base64).</summary>
+    /// <summary>
+    /// The name of the header containing the Base64-encoded HMAC signature.
+    /// Default is <c>X-Swish-Signature</c>.
+    /// </summary>
     public string SignatureHeaderName { get; set; } = "X-Swish-Signature";
 
-    /// <summary>Namn på header med UTC-timestamp (RFC3339/ISO8601).</summary>
+    /// <summary>
+    /// The name of the header containing the Unix or ISO timestamp.
+    /// Default is <c>X-Swish-Timestamp</c>.
+    /// </summary>
     public string TimestampHeaderName { get; set; } = "X-Swish-Timestamp";
 
-    /// <summary>Namn på header med unik nonce (GUID/sträng).</summary>
+    /// <summary>
+    /// The name of the header containing the unique nonce for replay protection.
+    /// Default is <c>X-Swish-Nonce</c>.
+    /// </summary>
     public string NonceHeaderName { get; set; } = "X-Swish-Nonce";
 }
 

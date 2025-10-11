@@ -7,21 +7,24 @@ using System.Text;
 namespace NordAPI.Swish.Webhooks;
 
 /// <summary>
-/// Verifierar Swish-webhookar.
-/// 
-/// Stöder header-alias:
-/// - X-Swish-Timestamp / X-Timestamp
-/// - X-Swish-Signature / X-Signature
-/// - X-Swish-Nonce / X-Nonce
-///
-/// Canonical som signeras:
-///   {timestamp}\n{nonce}\n{body}
-///
-/// Timestamp-format som accepteras:
-/// - Unix sekunder (ex: 1757962690)
-/// - Unix millisekunder (ex: 1757960508877)
-/// - ISO-8601 (ex: 2025-09-15T18:21:01Z)
+/// Verifies incoming Swish webhook requests by checking HMAC signature, timestamp, and nonce (anti-replay).
 /// </summary>
+/// <remarks>
+/// Header aliases supported:
+/// - <c>X-Swish-Timestamp</c> / <c>X-Timestamp</c>
+/// - <c>X-Swish-Signature</c> / <c>X-Signature</c>
+/// - <c>X-Swish-Nonce</c> / <c>X-Nonce</c>
+///
+/// Canonical form signed:
+/// <code>
+/// {timestamp}\n{nonce}\n{body}
+/// </code>
+///
+/// Accepted timestamp formats:
+/// - Unix seconds (e.g., 1757962690)
+/// - Unix milliseconds (e.g., 1757960508877)
+/// - ISO-8601 UTC (e.g., 2025-09-15T18:21:01Z)
+/// </remarks>
 public sealed class SwishWebhookVerifier
 {
     private static readonly StringComparison Ci = StringComparison.OrdinalIgnoreCase;
@@ -29,47 +32,57 @@ public sealed class SwishWebhookVerifier
     private readonly SwishWebhookVerifierOptions _opt;
     private readonly ISwishNonceStore _nonceStore;
 
+    /// <summary>
+    /// Creates a new verifier instance.
+    /// </summary>
+    /// <param name="options">Verification options, including shared secret and time window.</param>
+    /// <param name="nonceStore">Nonce store used for replay protection.</param>
+    /// <exception cref="ArgumentException">Thrown if the shared secret is missing.</exception>
     public SwishWebhookVerifier(SwishWebhookVerifierOptions options, ISwishNonceStore nonceStore)
     {
         _opt = options ?? throw new ArgumentNullException(nameof(options));
         _nonceStore = nonceStore ?? throw new ArgumentNullException(nameof(nonceStore));
         if (string.IsNullOrWhiteSpace(_opt.SharedSecret))
-            throw new ArgumentException("SharedSecret måste vara satt.", nameof(options));
+            throw new ArgumentException("SharedSecret must be configured.", nameof(options));
     }
 
     /// <summary>
-    /// Verifierar signatur, tidsfönster och replay-skydd.
+    /// Verifies the signature, timestamp validity, and nonce replay protection.
     /// </summary>
+    /// <param name="body">The raw request body.</param>
+    /// <param name="headers">HTTP headers as a key-value collection.</param>
+    /// <param name="nowUtc">Current UTC time (for testability).</param>
+    /// <returns>A <see cref="VerifyResult"/> indicating success or failure reason.</returns>
     public VerifyResult Verify(string body, IReadOnlyDictionary<string, string> headers, DateTimeOffset nowUtc)
     {
-        // 1) Läs headers (tillåt alias)
+        // 1) Read headers (allow aliases)
         if (!TryGetAny(headers, out var sigB64, _opt.SignatureHeaderName, "X-Swish-Signature", "X-Signature"))
-            return VerifyResult.Fail("saknar signaturheader");
+            return VerifyResult.Fail("missing signature header");
 
         if (!TryGetAny(headers, out var tsStr, _opt.TimestampHeaderName, "X-Swish-Timestamp", "X-Timestamp"))
-            return VerifyResult.Fail("saknar timestampheader");
+            return VerifyResult.Fail("missing timestamp header");
 
         if (!TryGetAny(headers, out var nonce, _opt.NonceHeaderName, "X-Swish-Nonce", "X-Nonce"))
-            return VerifyResult.Fail("saknar nonceheader");
+            return VerifyResult.Fail("missing nonce header");
 
-        // 2) Tolka timestamp
+        // 2) Parse timestamp
         if (!TryParseTimestamp(tsStr, out var tsUtc))
-            return VerifyResult.Fail("ogiltig timestamp");
+            return VerifyResult.Fail("invalid timestamp");
 
-        // 3) Klockskew och ålder
+        // 3) Validate clock skew and age
         var skew = (nowUtc - tsUtc).Duration();
         if (skew > _opt.AllowedClockSkew)
-            return VerifyResult.Fail("timestamp utanför tolerated clock skew");
+            return VerifyResult.Fail("timestamp outside tolerated clock skew");
 
         if (nowUtc - tsUtc > _opt.MaxMessageAge)
-            return VerifyResult.Fail("meddelandet för gammalt");
+            return VerifyResult.Fail("message too old");
 
-        // 4) Anti-replay (nonce måste vara ny)
+        // 4) Anti-replay: nonce must be new
         var expires = nowUtc.Add(_opt.MaxMessageAge);
         if (!_nonceStore.TryRemember(nonce, expires))
-            return VerifyResult.Fail("replay upptäckt (nonce sedd tidigare)");
+            return VerifyResult.Fail("replay detected (nonce already seen)");
 
-        // 5) Signaturkontroll: Base64(HMACSHA256(secret, "{ts}\n{nonce}\n{body}"))
+        // 5) Signature verification: Base64(HMACSHA256(secret, "{ts}\n{nonce}\n{body}"))
         var canonical = $"{tsStr}\n{nonce}\n{body}";
         var key = Encoding.UTF8.GetBytes(_opt.SharedSecret);
         var data = Encoding.UTF8.GetBytes(canonical);
@@ -78,7 +91,7 @@ public sealed class SwishWebhookVerifier
         var expectedB64 = Convert.ToBase64String(mac);
 
         if (!ConstantTimeEquals(expectedB64, sigB64))
-            return VerifyResult.Fail("signatur mismatch");
+            return VerifyResult.Fail("signature mismatch");
 
         return VerifyResult.Ok();
     }
@@ -97,6 +110,7 @@ public sealed class SwishWebhookVerifier
                 }
             }
         }
+
         value = "";
         return false;
     }
@@ -105,11 +119,12 @@ public sealed class SwishWebhookVerifier
     {
         if (long.TryParse(tsHeader, out var num))
         {
-            if (tsHeader.Length >= 13) // millis
+            if (tsHeader.Length >= 13) // milliseconds
             {
                 tsUtc = DateTimeOffset.FromUnixTimeMilliseconds(num).ToUniversalTime();
                 return true;
             }
+
             tsUtc = DateTimeOffset.FromUnixTimeSeconds(num).ToUniversalTime();
             return true;
         }
@@ -141,11 +156,17 @@ public sealed class SwishWebhookVerifier
         return diff == 0;
     }
 
+    /// <summary>
+    /// Represents the result of a webhook verification.
+    /// </summary>
+    /// <param name="Success">Whether the verification succeeded.</param>
+    /// <param name="Reason">Optional failure reason.</param>
     public readonly record struct VerifyResult(bool Success, string? Reason)
     {
         public static VerifyResult Ok() => new(true, null);
         public static VerifyResult Fail(string reason) => new(false, reason);
     }
 }
+
 
 

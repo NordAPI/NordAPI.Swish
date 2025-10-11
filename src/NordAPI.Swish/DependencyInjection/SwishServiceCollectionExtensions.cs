@@ -1,4 +1,3 @@
-// src/NordAPI.Swish/DependencyInjection/SwishServiceCollectionExtensions.cs
 using System;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;

@@ -22,9 +22,10 @@
     -->
   </PropertyGroup>
 
-  <!-- Suppress missing XML-doc warnings in Release -->
+  <!-- Release: generate XML docs (IntelliSense) and keep CS1591 suppressed -->
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -42,3 +43,4 @@
   </ItemGroup>
 
 </Project>
+

@@ -171,4 +171,15 @@ h1.reveal    { animation-delay: .15s; }
   filter: brightness(1.08);
 }
 
+.contact-link {
+  color: #4da3ff;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.contact-link:hover {
+  color: #77c4ff;
+  text-decoration: underline;
+}
+
+
 

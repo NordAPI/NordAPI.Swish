@@ -5,6 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>NordAPI – Secure .NET integrations in minutes</title>
   <meta name="description" content="Swish & BankID SDK for .NET. mTLS, HMAC, anti-replay. Build secure payments and identity flows in minutes." />
+
+  <!-- SEO / Social -->
+  <link rel="canonical" href="https://nordapi.net/" />
+  <link rel="icon" href="assets/nordapi-logo.png" type="image/png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://nordapi.net/" />
+  <meta property="og:title" content="NordAPI – Secure .NET integrations in minutes" />
+  <meta property="og:description" content="Swish & BankID SDK for .NET with mTLS, HMAC and anti-replay. Go from zero to secure payments fast." />
+  <meta property="og:image" content="assets/nordapi-logo.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="NordAPI – Secure .NET integrations in minutes" />
+  <meta name="twitter:description" content="Swish & BankID SDK for .NET with mTLS, HMAC and anti-replay." />
+  <meta name="twitter:image" content="assets/nordapi-logo.png" />
+
+  <!-- Perf -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -16,7 +32,7 @@
         <span class="brandname">NordAPI</span>
       </a>
 
-      <!-- Mobile menu toggle (hidden on desktop) -->
+      <!-- Mobile menu toggle -->
       <button class="menu-toggle" aria-expanded="false" aria-controls="nav-links" aria-label="Toggle navigation">
         <span class="menu-bars" aria-hidden="true"></span>
       </button>
@@ -29,17 +45,42 @@
     </div>
   </nav>
 
-  <!-- HERO: keep your look, add dual-CTA -->
+  <!-- HERO -->
   <header id="top" class="hero">
     <div class="container hero-inner">
       <img src="assets/nordapi-logo.png" alt="NordAPI logo" class="logo reveal glow" loading="lazy" />
       <h1 class="reveal">Secure .NET integrations in minutes</h1>
       <p class="subtitle reveal">Swish &amp; BankID SDK by NordAPI • mTLS • HMAC • Anti-replay</p>
+
       <div class="cta-row">
         <a href="#quickstart" class="cta reveal glow" rel="noopener">Get started</a>
         <a href="https://github.com/NordAPI/NordAPI.SwishSdk" class="cta-outline reveal" target="_blank" rel="noopener">View on GitHub</a>
       </div>
-      <!-- Trust mini-badges -->
+
+      <!-- Trust badges -->
+      <!-- NOTE: Using local static badges until repo & package are public.
+           When ready, replace this block with shields.io images (kept below commented). -->
+      <div class="shields reveal local" aria-label="project badges">
+        <span class="badge">GitHub: Private</span>
+        <span class="badge">NuGet: Coming&nbsp;soon</span>
+        <span class="badge">Downloads: 0</span>
+      </div>
+
+      <!-- Public badges (uncomment when repo/package are public)
+      <div class="shields reveal" aria-label="project badges">
+        <a href="https://github.com/NordAPI/NordAPI.SwishSdk" target="_blank" rel="noopener" aria-label="GitHub stars">
+          <img src="https://img.shields.io/github/stars/NordAPI/NordAPI.SwishSdk?style=flat&logo=github" alt="GitHub stars badge" loading="lazy">
+        </a>
+        <a href="https://www.nuget.org/packages/NordAPI.Swish" target="_blank" rel="noopener" aria-label="NuGet version">
+          <img src="https://img.shields.io/nuget/vpre/NordAPI.Swish?label=NuGet" alt="NuGet version badge" loading="lazy">
+        </a>
+        <a href="https://www.nuget.org/packages/NordAPI.Swish" target="_blank" rel="noopener" aria-label="NuGet downloads">
+          <img src="https://img.shields.io/nuget/dt/NordAPI.Swish?label=downloads" alt="NuGet downloads badge" loading="lazy">
+        </a>
+      </div>
+      -->
+
+      <!-- Tech mini-badges -->
       <div class="badges reveal" aria-label="tech badges">
         <span>.NET 8+</span>
         <span>MIT</span>
@@ -48,7 +89,7 @@
     </div>
   </header>
 
-  <!-- QUICKSTART: 5-minute flow with copy buttons -->
+  <!-- QUICKSTART -->
   <section id="quickstart" class="section quickstart">
     <div class="container">
       <h2>Quickstart (5 minutes)</h2>
@@ -106,32 +147,32 @@ await swish.PayAsync(new SwishPaymentRequest {
     </div>
   </section>
 
-  <!-- FEATURES GRID: crisp, scannable -->
+  <!-- FEATURES -->
   <section id="features" class="section features">
     <div class="container">
       <h2>Why NordAPI?</h2>
 
       <div class="feature-grid">
         <article class="feature">
-          <div class="icon">🔒</div>
+          <div class="icon" aria-hidden="true">🔒</div>
           <h3>Security first</h3>
           <p>mTLS, HMAC, nonce/replay protection and request signing out-of-the-box.</p>
         </article>
 
         <article class="feature">
-          <div class="icon">⚡</div>
+          <div class="icon" aria-hidden="true">⚡</div>
           <h3>Fast integration</h3>
           <p>Production-ready client, minimal plumbing and sane defaults for .NET.</p>
         </article>
 
         <article class="feature">
-          <div class="icon">🧩</div>
+          <div class="icon" aria-hidden="true">🧩</div>
           <h3>Webhooks &amp; SDK</h3>
           <p>End-to-end flow: create payments, receive callbacks, verify and persist.</p>
         </article>
 
         <article class="feature">
-          <div class="icon">📊</div>
+          <div class="icon" aria-hidden="true">📊</div>
           <h3>Observability</h3>
           <p>Structured logging and IDs that make troubleshooting straightforward.</p>
         </article>
@@ -160,9 +201,9 @@ await swish.PayAsync(new SwishPaymentRequest {
     </div>
   </footer>
 
-  <!-- Tiny JS: copy-to-clipboard for code blocks + mobile nav -->
+  <!-- Tiny JS: copy-to-clipboard + mobile nav -->
   <script>
-    // Accessible copy buttons for code snippets
+    // Copy buttons
     document.querySelectorAll('.copy').forEach(btn => {
       btn.addEventListener('click', async () => {
         try {
@@ -176,16 +217,27 @@ await swish.PayAsync(new SwishPaymentRequest {
       });
     });
 
-    // Mobile menu toggle
+    // Mobile menu toggle & auto-close on link click
     const toggle = document.querySelector('.menu-toggle');
-    const links = document.getElementById('nav-links');
     const nav = document.querySelector('.topnav');
+    const navLinks = document.querySelectorAll('#nav-links a');
+
     toggle?.addEventListener('click', () => {
       const open = nav.classList.toggle('open');
       toggle.setAttribute('aria-expanded', String(open));
     });
+
+    navLinks.forEach(a => a.addEventListener('click', () => {
+      if (nav.classList.contains('open')) {
+        nav.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+    }));
   </script>
 </body>
 </html>
+
+
+
 
 

@@ -49,7 +49,7 @@
   <!-- Fonts + styles -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=mobile-fix-3">
 
   <!-- Structured Data -->
   <script type="application/ld+json">
@@ -77,7 +77,7 @@
   <nav class="topnav" aria-label="Primary navigation">
     <div class="container nav-inner">
       <a class="brand" href="#top" aria-label="NordAPI home">
-        <img src="assets/nordapi-logo.png" alt="" class="brandmark" width="28" height="28">
+        <img src="assets/nordapi-logo.png" alt="NordAPI logo" class="brandmark" width="28" height="28">
         <span class="brandname">NordAPI</span>
       </a>
 
@@ -234,6 +234,7 @@ await swish.PayAsync(new SwishPaymentRequest {
     </div>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="app.js" defer></script>
 </body>
 </html>
+

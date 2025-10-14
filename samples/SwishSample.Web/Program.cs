@@ -30,36 +30,27 @@ builder.Services.AddSwishClient(opts =>
     opts.BaseAddress = new Uri(baseUrl);
     opts.ApiKey = Environment.GetEnvironmentVariable("SWISH_API_KEY") ?? "dev-key";
     opts.Secret = Environment.GetEnvironmentVariable("SWISH_SECRET") ?? "dev-secret";
+});
 
 // -------------------------------------------------------------
 // Webhook-verifiering + nonce-store via våra extensions
-//   - Hemlighet från secrets/env: SWISH_WEBHOOK_SECRET
-//   - InMemory som default; Redis om SWISH_REDIS/SWISH_REDIS_CONN/REDIS_URL finns
+//   - Hemlighet: SWISH_WEBHOOK_SECRET (user-secrets/ENV/CI)
+//   - InMemory som default; Redis om SWISH_REDIS / SWISH_REDIS_CONN / REDIS_URL finns
 // -------------------------------------------------------------
-var wh = builder.Services.AddSwishWebhookVerification(cfg =>
-{
-    var secret =
-        Environment.GetEnvironmentVariable("SWISH_WEBHOOK_SECRET")
-        ?? builder.Configuration["SWISH_WEBHOOK_SECRET"];
+builder.Services
+    .AddSwishWebhookVerification(cfg =>
+    {
+        var secret =
+            Environment.GetEnvironmentVariable("SWISH_WEBHOOK_SECRET")
+            ?? builder.Configuration["SWISH_WEBHOOK_SECRET"];
 
-    if (string.IsNullOrWhiteSpace(secret))
-        throw new InvalidOperationException("Missing SWISH_WEBHOOK_SECRET.");
+        if (string.IsNullOrWhiteSpace(secret))
+            throw new InvalidOperationException("Missing SWISH_WEBHOOK_SECRET.");
 
-    cfg.SharedSecret = secret;
-});
-
-// Registrera nonce store direkt på IServiceCollection (samma funktionalitet)
-var redisConn =
-    Environment.GetEnvironmentVariable("SWISH_REDIS")
-    ?? Environment.GetEnvironmentVariable("REDIS_URL")
-    ?? Environment.GetEnvironmentVariable("SWISH_REDIS_CONN");
-
-wh.Services.AddSingleton<ISwishNonceStore>(sp =>
-    string.IsNullOrWhiteSpace(redisConn)
-        ? new InMemoryNonceStore(TimeSpan.FromMinutes(5))
-        : new RedisNonceStore(redisConn, "swish:nonce:"));
-
-    });
+        cfg.SharedSecret = secret;
+        // Övriga defaults (±5 min skew, 5 min max-age, headernamn) behålls
+    })
+    .AddNonceStoreFromEnvironment(TimeSpan.FromMinutes(5), "swish:nonce:"); // använder Redis om konfig satt
 
 var app = builder.Build();
 
@@ -88,7 +79,7 @@ app.MapPost("/webhook/swish", async (
     // 2) Läs rå body
     req.EnableBuffering();
     string rawBody;
-    using (var reader = new StreamReader(req.Body, Encoding.UTF8, false, leaveOpen: true))
+    using (var reader = new StreamReader(req.Body, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true))
         rawBody = (await reader.ReadToEndAsync()) ?? string.Empty;
     req.Body.Position = 0;
 
@@ -132,6 +123,7 @@ static string ValueOr(StringValues a, StringValues b)
 
 // Exponera Program för tester
 public partial class Program { }
+
 
 
 

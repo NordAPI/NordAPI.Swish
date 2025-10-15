@@ -262,6 +262,74 @@ h1{
 .feature h3{ margin:0 0 6px; font-size:16px }
 .feature p{ margin:0; color:#cfe0ff; font-size:14px }
 
+/* ---------- Supercard (value prop banner) ---------- */
+.feature-supercard{
+  position: relative;
+  margin-top: 16px;
+  background:
+    radial-gradient(900px 400px at 15% 20%, rgba(40,120,255,.18), transparent 60%),
+    radial-gradient(900px 400px at 85% 80%, rgba(0,180,255,.18), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  border-top: 1px solid rgba(255,255,255,.06);
+  border-bottom: 1px solid rgba(0,0,0,.45);
+}
+
+.supercard-inner{
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 0;
+}
+
+.zap{
+  font-size: 26px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(60,180,255,.18), rgba(60,180,255,.06));
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 8px 22px rgba(0,120,255,.18) inset, 0 6px 16px rgba(0,0,0,.22);
+}
+
+.supercopy h3{
+  margin: 0 0 4px;
+  font-size: clamp(18px, 2.1vw, 22px);
+  letter-spacing: .2px;
+  background: linear-gradient(90deg, var(--blue-1), var(--blue-2));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+
+.supercopy p{
+  margin: 0;
+  color: #cfe0ff;
+  font-size: clamp(14px, 1.3vw, 15px);
+}
+
+/* Reuse your CTA but make a compact variant */
+.cta-small{ padding: 11px 16px; border-radius: 9px; font-weight: 700; white-space: nowrap }
+
+/* Hover lift on the whole banner (subtle, no motion overload) */
+.feature-supercard:hover .supercard-inner{
+  transform: translateY(-1px);
+  transition: transform .18s ease;
+}
+
+/* Mobile layout */
+@media (max-width: 780px){
+  .supercard-inner{
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 12px;
+  }
+  .zap{ margin: 0 auto }
+  .cta-small{ width: 100% }
+}
+
 /* ---------- Docs callout ---------- */
 .docs{ background: var(--panel-opaque) }
 .callout{
@@ -352,3 +420,37 @@ h1.reveal{ animation-delay:.15s }
   background: linear-gradient(180deg, rgba(12,18,34,0) 0%, rgba(10,17,31,1) 100%);
   pointer-events: none;
 }
+
+/* ---------- Small global polish (safe to add) ---------- */
+/* Nicer focus ring on CTAs only */
+.cta:focus-visible, .cta-outline:focus-visible, .cta-small:focus-visible{
+  outline: 2px solid var(--blue-2);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(100,180,255,.12);
+}
+
+/* Animated underline for text links (docs/repo) */
+.link{
+  position: relative;
+}
+.link::after{
+  content:"";
+  position: absolute; left: 0; right: 0; bottom: 6px;
+  height: 2px; transform: scaleX(0); transform-origin: left;
+  background: linear-gradient(90deg, var(--blue-1), var(--blue-2));
+  transition: transform .18s ease;
+}
+.link:hover::after{ transform: scaleX(1) }
+
+/* Slightly crisper cards when hovering (features & quickstart) */
+.card:hover, .feature:hover{
+  border-color: rgba(255,255,255,.18);
+  transform: translateY(-3px);
+}
+
+/* Hero logo subtle float */
+.logo{
+  will-change: transform;
+  transition: transform .25s ease;
+}
+.logo:hover{ transform: translateY(-2px) scale(1.01) }

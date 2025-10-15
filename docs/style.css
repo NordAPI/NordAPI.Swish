@@ -456,31 +456,4 @@ h1.reveal{ animation-delay:.15s }
 }
 .logo:hover{ transform: translateY(-2px) scale(1.01) }
 
-/* ---- Hero overlap fix (Chrome/Firefox) ---- */
-.hero {
-  position: relative;
-  display: grid;            /* håller innehåll i flow */
-  align-content: start;
-  min-height: 520px;        /* ger säker höjd för logo + rubrik + knappar */
-  padding-bottom: 48px;     /* extra luft så nästa sektion inte klättrar upp */
-}
-
-.hero .logo,
-.hero img.hero-logo {
-  position: static !important;   /* ta bort absolute */
-  transform: none !important;    /* undvik "lyft" som tar bort höjd ur flow */
-  margin-bottom: 24px;
-}
-
-.hero .subline {                  /* raden med “.NET 8+ …” */
-  display: block;
-  margin-top: 16px;
-  line-height: 1.4;
-}
-
-main > section:first-of-type,
-#quickstart {
-  margin-top: 32px !important;    /* säkerhetsmarginal under hero */
-  clear: both;                     /* om något skulle flyta */
-}
 

@@ -537,4 +537,109 @@ h1.reveal{ animation-delay:.15s }
 
 /* === End patch ========================================================= */
 
+/* === Overlap fix: keep hero content (badges) above next section === */
+.hero{
+  position: relative;           /* creates stacking context */
+  z-index: 1;                   /* paint hero above following sections */
+  padding-bottom: clamp(32px, 4vh, 56px); /* extra clearance when text wraps */
+}
 
+/* Make sure the badges never get covered by the hero ::after overlay */
+.badges{
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Tame the decorative overlay so it never obscures content */
+.hero::after{
+  pointer-events: none;
+  z-index: 0;                   /* stays behind .badges thanks to .hero z-index */
+}
+
+/* On narrow/high-zoom viewports, tighten things a bit more */
+@media (max-width: 920px){
+  .hero{ padding-bottom: clamp(40px, 6vh, 72px); }
+  .badges span{ white-space: nowrap; } /* nicer wrap chunks */
+}
+
+/* === Hero layout v3: solid bottom clearance for high zoom (200%) === */
+@media (max-width: 1600px) {
+  .hero {
+    min-height: 95vh;            /* hero fills almost full viewport height */
+    padding-bottom: clamp(120px, 14vh, 200px); /* guarantee space for badges */
+  }
+}
+
+/* On very small screens / very high zoom, go full height to stop clipping */
+@media (max-width: 920px) {
+  .hero {
+    min-height: 110vh;           /* taller hero when text wraps heavily */
+    padding-bottom: clamp(140px, 18vh, 240px);
+  }
+}
+
+/* Fade overlay stays entirely inside hero */
+.hero::after {
+  bottom: 0;
+  height: 40px;
+}
+
+/* Badges kept visually grouped with hero */
+.badges {
+  margin-top: 4px;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 2;
+}
+
+/* === Nav v2: keep full brand label on high zoom & wrap earlier === */
+@media (max-width: 1200px){
+  /* Visa hamburger tidigare */
+  .menu-toggle{ display:block }
+
+  /* Dölj länkar (samma stil som tidigare 768px-regel) */
+  .nav-links{
+    display:none;
+    position:absolute; right:4%; top:100%;
+    background: rgba(8,12,22,.97);
+    border:1px solid var(--line);
+    border-radius:12px; padding:10px; margin-top:8px;
+    flex-direction:column; align-items:flex-start; gap:8px;
+    min-width: clamp(220px, 60vw, 320px);
+    box-shadow: 0 12px 28px rgba(0,0,0,.35);
+  }
+  .topnav.open .nav-links{ display:flex }
+
+  /* Låt varumärket få plats – ingen ellips i hamburger-läge */
+  .brandname{
+    max-width: none;
+    overflow: visible;
+    text-overflow: initial;
+    white-space: nowrap;   /* håll "NordAPI" på en rad */
+  }
+}
+
+/* === Nav v3: never truncate 'NordAPI' on desktop === */
+
+/* Desktop (större än hamburger-brytpunkten) */
+@media (min-width: 1201px){
+  .brandname{
+    max-width: none;       /* ta bort 60%-locket */
+    overflow: visible;     /* ingen ellips */
+    text-overflow: clip;
+    white-space: nowrap;   /* håll 'NordAPI' på en rad */
+  }
+
+  /* Se till att länkarna kan ge plats eller brytas till ny rad vid behov */
+  .nav-inner{
+    flex-wrap: wrap;       /* redan satt tidigare, men säkerställ */
+  }
+  .nav-links{
+    min-width: 0;          /* tillåt shrink */
+    flex: 0 1 auto;        /* ge plats åt .brand */
+  }
+}

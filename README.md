@@ -297,13 +297,13 @@ services.AddHttpClient("Swish")
 ## 💬 Getting help
 
 - 📂 Open [GitHub Issues](https://github.com/NordAPI/NordAPI.SwishSdk/issues) for general questions or bug reports.  
-- 🔒 Security concerns? Email [security@nordapi.se](mailto:security@nordapi.se).
+- 🔒 Security concerns? Email [security@nordapi.com](mailto:security@nordapi.com).
 
 ---
 
 ## 🛡️ Security Disclosure
 
-If you discover a security issue, please report it privately to `security@nordapi.se`.  
+If you discover a security issue, please report it privately to `security@nordapi.com`.  
 Do **not** use GitHub Issues for security-related matters.
 
 ---

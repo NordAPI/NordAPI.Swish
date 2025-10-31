@@ -9,9 +9,11 @@ namespace NordAPI.Swish.Tests.Webhooks
         [Fact]
         public void Dispose_Does_Not_Throw_For_InternallyOwned_Mux()
         {
-            using var store = new RedisNonceStore("localhost:6379", prefix: "test:");
+            // abortConnect=false => Connect() does not throw if Redis is missing in CI.
+            using var store = new RedisNonceStore("localhost:6379,abortConnect=false", prefix: "test:");
             store.Dispose();
             Assert.True(true);
         }
     }
 }
+

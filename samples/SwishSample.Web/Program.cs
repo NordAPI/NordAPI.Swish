@@ -17,7 +17,15 @@ var redisConn =
     ?? Environment.GetEnvironmentVariable("REDIS_URL")
     ?? Environment.GetEnvironmentVariable("SWISH_REDIS_CONN");
 
-// If provided, wire up RedisNonceStore; otherwise fall back to in-memory.
+// --- Production guard: require a persistent nonce store in Production ---
+var hostingEnv = builder.Environment;
+if (hostingEnv.IsProduction() && string.IsNullOrWhiteSpace(redisConn))
+{
+    throw new InvalidOperationException(
+        "Production requires a persistent nonce store. Set SWISH_REDIS (or REDIS_URL / SWISH_REDIS_CONN).");
+}
+
+// If provided, wire up RedisNonceStore; otherwise fall back to in-memory (dev only).
 if (!string.IsNullOrWhiteSpace(redisConn))
 {
     // Prefer a single shared multiplexer for app lifetime.
@@ -76,6 +84,7 @@ var app = builder.Build();
 // -------------------------------------------------------------
 // Small helper endpoints
 // -------------------------------------------------------------
+app.MapHealthChecks("/health/ready");
 app.MapGet("/", () => "Swish sample is running. Try /health, /di-check, or POST /webhook/swish");
 app.MapGet("/health", () => "ok");
 app.MapGet("/di-check", (ISwishClient swish) => swish is not null ? "ISwishClient is registered" : "not found");
@@ -142,6 +151,7 @@ static string ValueOr(StringValues a, StringValues b)
 
 // Expose Program for tests
 public partial class Program { }
+
 
 
 

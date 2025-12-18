@@ -1,4 +1,0 @@
-﻿Contact: mailto:info@nordapi.com
-Preferred-Languages: en, sv
-Policy: https://nordapi.net/
-Acknowledgments: https://nordapi.net/

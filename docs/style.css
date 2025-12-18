@@ -28,14 +28,15 @@
 }
 
 *{box-sizing:border-box;min-width:0}
-html{height:100dvh;margin:0}
-body{height:100dvh;margin:0}
+html { height: 100%; margin: 0; }
+body { min-height: 100vh; min-height: 100svh; margin: 0; }
 img{max-width:100%;height:auto;display:block;vertical-align:middle}
 
 html{
   /* ensure gradient background renders on mobile Chrome */
   background-color: var(--bg-top);
-  min-height: 100dvh;
+  min-height: 100vh;
+  min-height: 100svh;
   background:
     radial-gradient(1200px 600px at 50% -200px,#112043 0%,transparent 70%),
     radial-gradient(900px 600px at 80% 20%,#0b1b37 0%,transparent 60%),
@@ -61,7 +62,8 @@ body{
   html,body{
     background-color: var(--bg-top);
     background: linear-gradient(180deg,var(--bg-top),var(--bg-deep));
-    min-height: 100dvh;
+    min-height: 100vh;
+    min-height: 100svh;
   }
 }
 
@@ -111,9 +113,15 @@ body{
 /* ---------- Hero ---------- */
 .hero{
   display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:center;
-  min-height:70vh;min-height:70svh;min-height:70dvh;
-  padding:10vh 0 6vh;
-  padding-top:calc(10vh + var(--nav-h) + env(safe-area-inset-top,0));
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  z-index: 1;
+  padding-bottom: clamp(32px, 4svh, 56px);
+  min-height:70vh;min-height:70svh;
+  padding: 10svh 0 6svh;
+  padding-top: calc(10svh + var(--nav-h) + env(safe-area-inset-top,0));
+
 }
 .hero-inner{display:flex;flex-direction:column;align-items:center;gap:3vh;margin:0 auto;width:100%;max-width:900px}
 .logo{
@@ -284,8 +292,8 @@ h1.reveal{animation-delay:.15s}
 @media (max-width:540px){
   .container{width:94%}
   .hero{
-    padding:8vh 0 5vh;
-    padding-top:calc(8vh + var(--nav-h) + env(safe-area-inset-top,0));
+    padding: 8svh 0 5svh;
+    padding-top: calc(8svh + var(--nav-h) + env(safe-area-inset-top,0));
     min-height:auto;
   }
   .logo{width:60%;max-width:240px}
@@ -316,12 +324,22 @@ h1.reveal{animation-delay:.15s}
 }
 
 /* hero → section gradient blend */
-.hero{position:relative}
 .hero::after{
-  content:"";position:absolute;left:0;right:0;bottom:-8px;height:28px;
-  background:linear-gradient(180deg,rgba(12,18,34,0) 0%,rgba(10,17,31,1) 100%);
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:40px;
+  background:linear-gradient(
+    180deg,
+    rgba(12,18,34,0) 0%,
+    rgba(10,17,31,1) 100%
+  );
   pointer-events:none;
+  z-index:0;
 }
+
 
 /* ---------- Small global polish ---------- */
 .cta:focus-visible,.cta-outline:focus-visible,.cta-small:focus-visible{
@@ -365,32 +383,33 @@ h1.reveal{animation-delay:.15s}
 @media (max-width:920px){
   .brandname{max-width:50vw;font-size:clamp(14px,2.4vw,18px)}
   .nav-links{gap:10px}
-  .hero{padding-top:calc(8vh + var(--nav-h))}
+  .hero{padding-top:calc(8svh + var(--nav-h))}
   .logo{max-width:var(--logo-max-small)}
   .cta,.cta-outline{padding:10px 14px}
 }
 /* ===== End safety patch ===== */
 
 /* ===== Overlap fix: keep hero badges/content above next section ===== */
-.hero{position:relative;z-index:1;padding-bottom:clamp(32px,4vh,56px)}
 .badges{
+  overflow: hidden;
+  isolation: isolate;
   position:relative;z-index:2;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
-}
-.hero::after{pointer-events:none;z-index:0}
-
-@media (max-width:920px){
-  .hero{padding-bottom:clamp(40px,6vh,72px)}
-  .badges span{white-space:nowrap}
 }
 
 /* taller hero under high zoom */
 @media (max-width:1600px){
-  .hero{min-height:95vh;padding-bottom:clamp(120px,14vh,200px)}
+  .hero{min-height:95svh;padding-bottom:clamp(120px,14svh,200px)}
 }
+
 @media (max-width:920px){
-  .hero{min-height:110vh;padding-bottom:clamp(140px,18vh,240px)}
+  .hero{
+    min-height:110svh;
+    padding-bottom:clamp(40px,6svh,72px);
+  }
+  .badges span{white-space:nowrap}
 }
-.hero::after{bottom:0;height:40px}
+
+
 .badges{margin-top:4px;margin-bottom:12px;position:relative;z-index:2}
 
 /* ===== Nav v2/v3: preserve full brand label and wrap earlier ===== */
@@ -416,21 +435,18 @@ h1.reveal{animation-delay:.15s}
 
 /* === Mobile/Tablet: crisp separation after hero =================== */
 @media (max-width: 920px){
-  /* Ta bort överdriven höjd + grå “fade” som ser ut som ett block */
+  /* Remove excessive height + gray "fade" that looks like a block */
   .hero{
     min-height: auto !important;
     padding-bottom: 28px !important;
   }
-  .hero::after{
-    display: none !important;
-  }
 
-  /* Gör första sektionen lika avgränsad som övriga block */
+  /* Make the first section as separated as the other blocks */
   .hero + .section{
     margin-top: 0 !important;
     background: var(--panel-opaque) !important;
     border-top: 1px solid var(--line) !important;
-    box-shadow: 0 -1px 0 rgba(0,0,0,.45) inset; /* subtil “kant” uppåt */
+    box-shadow: 0 -1px 0 rgba(0,0,0,.45) inset; /* subtle upward edge */
   }
 }
 

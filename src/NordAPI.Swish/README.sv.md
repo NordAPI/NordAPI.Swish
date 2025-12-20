@@ -2,7 +2,7 @@
 
 > **Produktionsnotis**
 > Minneslagring av nonce är endast för **utvecklingsmiljö**. I produktion **måste** du använda en persistent lagring (Redis/DB).
-> Ange `SWISH_REDIS` (eller `REDIS_URL` / `SWISH_REDIS_CONN`). Exempelappen stoppar start i `Production` om ingen Redis är satt.
+> Ange `SWISH_REDIS` (eller `REDIS_URL` / `SWISH_REDIS_CONN`). Exempelappen vägrar starta i `Production` om ingen Redis är satt.
 
 **Licensnotis:** NordAPI är ett SDK. Du behöver egna Swish/BankID-avtal och certifikat. NordAPI tillhandahåller inte dessa.
 
@@ -12,16 +12,16 @@ Officiellt NordAPI SDK för Swish och kommande BankID-integrationer.
 [![Build](https://github.com/NordAPI/NordAPI.SwishSdk/actions/workflows/ci.yml/badge.svg)](https://github.com/NordAPI/NordAPI.SwishSdk/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/NordAPI.Swish.svg?label=NuGet)](https://www.nuget.org/packages/NordAPI.Swish)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-![.NET](https://img.shields.io/badge/.NET-7%2B-blueviolet)
+![.NET](https://img.shields.io/badge/.NET-7%20%7C%208-blueviolet)
 
 > 🇬🇧 English version: [README.md](./README.md)
 > ✅ Se även: [Integration Checklist](../../docs/integration-checklist.md)
 
-Ett lättviktigt och säkert .NET SDK för att integrera **Swish-betalningar och återköp** i test- och utvecklingsmiljöer.
+Ett lättviktigt och säkert .NET SDK för att integrera **Swish-betalningar och återköp**, med fokus på säkra test- och utvecklingsflöden.
 Inkluderar inbyggd HMAC-signering, valfritt mTLS, och retry/rate limiting via `HttpClientFactory`.
 💡 *BankID SDK-stöd är planerat härnäst — håll utkik efter paketet `NordAPI.BankID`.*
 
-**Stödda .NET-versioner:** .NET 7 och 8 (LTS)
+**Stödda .NET-versioner:** .NET 7 och 8 (LTS). Planerat: .NET 10 (LTS)-stöd.
 
 ---
 

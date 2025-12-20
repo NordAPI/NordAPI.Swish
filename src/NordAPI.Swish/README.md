@@ -1,4 +1,4 @@
-﻿# NordAPI.Swish SDK
+# NordAPI.Swish SDK
 
 > **Production notice**
 > In-memory nonce store is for **development only**. In production you **must** use a persistent store (Redis/DB).
@@ -12,16 +12,16 @@ Official NordAPI SDK for Swish and upcoming BankID integrations.
 [![Build](https://github.com/NordAPI/NordAPI.SwishSdk/actions/workflows/ci.yml/badge.svg)](https://github.com/NordAPI/NordAPI.SwishSdk/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/NordAPI.Swish.svg?label=NuGet)](https://www.nuget.org/packages/NordAPI.Swish)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-![.NET](https://img.shields.io/badge/.NET-7%2B-blueviolet)
+![.NET](https://img.shields.io/badge/.NET-7%20%7C%208-blueviolet)
 
 > 🇸🇪 Swedish version: [README.sv.md](./README.sv.md)
 > ✅ See also: [Integration Checklist](../../docs/integration-checklist.md)
 
-A lightweight and secure .NET SDK for integrating **Swish payments and refunds** in test and development environments.
+A lightweight and secure .NET SDK for integrating **Swish payments and refunds**, with a focus on safe test and development workflows.
 Includes built-in HMAC signing, optional mTLS, and retry/rate limiting via `HttpClientFactory`.
 💡 *BankID SDK support is planned next — stay tuned for the `NordAPI.BankID` package.*
 
-**Supported .NET versions:** .NET 7 and 8 (LTS)
+**Supported .NET versions:** .NET 7 and 8 (LTS). Planned: .NET 10 (LTS) support.
 
 ---
 

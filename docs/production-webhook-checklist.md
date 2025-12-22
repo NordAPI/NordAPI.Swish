@@ -2,13 +2,21 @@
 
 This checklist covers production-grade requirements for receiving Swish callbacks securely.
 
+> **Important (Swish baseline):** The official Swish Merchant Integration Guide requires callback delivery over **HTTPS on port 443**.
+> Swish validates your callback server TLS certificate against commonly recognized CAs, recommends **IP filtering**, and notes that callback does **not** support SNI.
+> The official guide does not describe Swish-sent HMAC signature headers; the `X-Swish-*` header checks below apply **only if you add an optional signing layer** (e.g., an internal proxy/gateway or local hardening) on top of Swish callbacks.
+
+
 ## Transport & endpoint
 - [ ] Serve the webhook endpoint over **HTTPS only**.
 - [ ] Enforce **HSTS** (at least on the primary domain).
 - [ ] Consider a dedicated hostname/path for the Swish webhook (e.g. `/webhook/swish`).
 - [ ] Ensure your server clock is synchronized (NTP).
+- [ ] Accept **POST** only (reject other methods).
+- [ ] Validate `Content-Type` starts with `application/json` (reject otherwise).
+- [ ] Set a reasonable max request body size to avoid abuse.
 
-## Required headers (reject if missing)
+## Optional signing headers (only if you enable an extra signing layer)
 - [ ] `X-Swish-Timestamp` — Unix timestamp in **seconds** (integer).
 - [ ] `X-Swish-Nonce` — unique value per request (UUID recommended).
 - [ ] `X-Swish-Signature` — **Base64** HMAC-SHA256 signature.
@@ -19,6 +27,7 @@ This checklist covers production-grade requirements for receiving Swish callback
   `"<timestamp>\n<nonce>\n<body>"`
 
 - [ ] Sign/verify the **exact raw request body bytes** (no JSON prettifying, no whitespace normalization).
+- [ ] Read the body as raw bytes exactly once (avoid re-encoding).
 - [ ] Use **constant-time** comparison for signature verification.
 - [ ] Reject invalid Base64 or malformed signatures.
 
@@ -52,6 +61,9 @@ This checklist covers production-grade requirements for receiving Swish callback
 - [ ] Verify invalid signature returns 401/403.
 - [ ] Verify replay returns 409 (or equivalent).
 - [ ] Verify old timestamp returns 400/401/403 (choose one and keep consistent).
+- [ ] Ensure the handler is **idempotent** (the same event may be delivered more than once).
+- [ ] Decide and document exact status codes for failures (e.g. 401/403 signature, 409 replay) and keep them consistent.
+- [ ] Verify callback retries behave as expected (Swish retries on non-200; HTTP 200 stops retries).
 
 ## Redis nonce store (recommended)
 - [ ] Set `SWISH_REDIS` in production.

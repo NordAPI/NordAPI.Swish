@@ -1,12 +1,10 @@
-﻿using System;
+﻿﻿using System;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
 using NordAPI.Swish.Security.Http;
-using Polly;
-using Polly.Extensions.Http;
 
 namespace NordAPI.Swish.DependencyInjection
 {

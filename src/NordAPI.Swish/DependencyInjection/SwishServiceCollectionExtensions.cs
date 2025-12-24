@@ -5,8 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
 using NordAPI.Swish.Security.Http;
-using Polly;
-using Polly.Extensions.Http;
 
 namespace NordAPI.Swish.DependencyInjection;
 
@@ -16,7 +14,7 @@ public static class SwishServiceCollectionExtensions
     /// Registers ISwishClient using HttpClientFactory.
     ///
     /// Pipeline (inner → outer):
-    ///   RateLimitingHandler → HmacSigningHandler → …(any test/host handlers) → Polly retry (outermost)
+    ///   RateLimitingHandler → HmacSigningHandler → …(any test/host handlers)
     ///
     /// Primary handler:
     ///   Assigned by a preserving IHttpMessageHandlerBuilderFilter that only sets a Primary
@@ -42,16 +40,6 @@ public static class SwishServiceCollectionExtensions
 
         services.AddSingleton(opts);
 
-        // OUTERMOST retry policy.
-        var retryPolicy = HttpPolicyExtensions
-            .HandleTransientHttpError()
-            .WaitAndRetryAsync(new[]
-            {
-                TimeSpan.FromMilliseconds(100),
-                TimeSpan.FromMilliseconds(200),
-                TimeSpan.FromMilliseconds(400),
-            });
-
         // Primary factory: explicit cert wins; else env/fallback.
         Func<HttpMessageHandler> primaryFactory = () =>
         {
@@ -66,7 +54,7 @@ public static class SwishServiceCollectionExtensions
                 return h;
             }
 
-            // Env-controlled (SWISH_PFX_PATH + SWISH_PFX_PASS) or plain if missing.
+            // Env-controlled mTLS (SWISH_PFX_PATH + SWISH_PFX_PASSWORD or legacy SWISH_PFX_PASS); plain fallback if missing.
             return SwishMtlsHandlerFactory.Create();
         };
 
@@ -80,27 +68,14 @@ public static class SwishServiceCollectionExtensions
             {
                 client.BaseAddress = opts.BaseAddress!;
             })
-            // Inner handlers (built inner → outer; retry added last = outermost)
+            // Inner handlers (built inner → outer)
             .AddHttpMessageHandler(() =>
                 new RateLimitingHandler(
                     maxConcurrency: 4,
                     minDelayBetweenCalls: TimeSpan.FromMilliseconds(100)))
             .AddHttpMessageHandler(() =>
-                new HmacSigningHandler(opts.ApiKey!, opts.Secret!))
-            // OUTERMOST: retry
-            .AddPolicyHandler(retryPolicy);
+                new HmacSigningHandler(opts.ApiKey!, opts.Secret!));
 
         return services;
     }
 }
-
-
-
-
-
-
-
-
-
-
-

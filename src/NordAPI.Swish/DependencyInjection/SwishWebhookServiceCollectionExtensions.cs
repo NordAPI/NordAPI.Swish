@@ -52,8 +52,3 @@ public static class SwishWebhookServiceCollectionExtensions
         return builder;
     }
 }
-
-
-
-
-

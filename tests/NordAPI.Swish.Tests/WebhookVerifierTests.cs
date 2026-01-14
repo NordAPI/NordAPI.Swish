@@ -1,6 +1,7 @@
 ﻿using NordAPI.Swish.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using FluentAssertions;
 using NordAPI.Swish.Webhooks;
@@ -31,7 +32,7 @@ namespace NordAPI.Swish.Tests
         {
             var body    = "{\"id\":\"abc123\",\"amount\":100}";
             var ts      = DateTimeOffset.UtcNow;
-            var headers = TestHelper.MakeHeadersIso(Secret, body, ts);
+            var headers = TestHelper.MakeHeadersUnixSeconds(Secret, body, ts);
 
             var verifier = CreateVerifier();
             var result   = verifier.Verify(body, headers, ts);
@@ -44,7 +45,7 @@ namespace NordAPI.Swish.Tests
         {
             var body    = "{\"id\":\"abc123\",\"amount\":100}";
             var tsOld   = DateTimeOffset.UtcNow.AddMinutes(-15); // older than MaxMessageAge + skew
-            var headers = TestHelper.MakeHeadersIso(Secret, body, tsOld);
+            var headers = TestHelper.MakeHeadersUnixSeconds(Secret, body, tsOld);
 
             var verifier = CreateVerifier();
             var result   = verifier.Verify(body, headers, DateTimeOffset.UtcNow);
@@ -60,7 +61,7 @@ namespace NordAPI.Swish.Tests
             // Arrange – sign with original body
             var bodyOriginal = "{\"id\":\"abc123\",\"amount\":100}";
             var ts           = DateTimeOffset.UtcNow;
-            var headers      = TestHelper.MakeHeadersIso(Secret, bodyOriginal, ts);
+            var headers      = TestHelper.MakeHeadersUnixSeconds(Secret, bodyOriginal, ts);
 
             // Act – verify with tampered body
             var bodyTampered = "{\"id\":\"abc123\",\"amount\":999}";
@@ -81,8 +82,8 @@ namespace NordAPI.Swish.Tests
             var ts    = DateTimeOffset.UtcNow;
             var nonce = Guid.NewGuid().ToString("N");
 
-            var headers1 = TestHelper.MakeHeadersIso(Secret, body, ts, nonce);
-            var headers2 = TestHelper.MakeHeadersIso(Secret, body, ts, nonce);
+            var headers1 = TestHelper.MakeHeadersUnixSeconds(Secret, body, ts, nonce);
+            var headers2 = TestHelper.MakeHeadersUnixSeconds(Secret, body, ts, nonce);
 
             var verifier = CreateVerifier();
 
@@ -99,23 +100,25 @@ namespace NordAPI.Swish.Tests
     internal static class TestHelper
     {
         /// <summary>
-        /// Builds headers with ISO-8601 timestamp, nonce, and HMAC-SHA256 signature.
+        /// Builds headers with STRICT Unix-seconds timestamp, nonce, and HMAC-SHA256 signature.
         /// Canonical format: timestamp\nnonce\nbody
         /// Signature is Base64-encoded HMAC over canonical string.
         /// </summary>
-        public static Dictionary<string, string> MakeHeadersIso(
+        public static Dictionary<string, string> MakeHeadersUnixSeconds(
             string secret,
             string body,
             DateTimeOffset ts,
             string? nonce = null)
         {
-            var tsStr      = ts.ToUniversalTime().ToString("o"); // ISO-8601 format
+            var tsStr      = ts.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
             var finalNonce = nonce ?? Guid.NewGuid().ToString("N");
 
             var message = $"{tsStr}\n{finalNonce}\n{body}";
             var key     = Encoding.UTF8.GetBytes(secret);
+
             using var hmac = new System.Security.Cryptography.HMACSHA256(key);
-            var sig = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(message)));
+            var sig = Convert.ToBase64String(
+                hmac.ComputeHash(Encoding.UTF8.GetBytes(message)));
 
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -130,7 +133,3 @@ namespace NordAPI.Swish.Tests
         }
     }
 }
-
-
-
-

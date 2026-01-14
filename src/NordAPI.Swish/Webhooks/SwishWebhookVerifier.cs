@@ -117,31 +117,25 @@ public sealed class SwishWebhookVerifier
 
     private static bool TryParseTimestamp(string tsHeader, out DateTimeOffset tsUtc)
     {
-        if (long.TryParse(tsHeader, out var num))
-        {
-            if (tsHeader.Length >= 13) // milliseconds
-            {
-                tsUtc = DateTimeOffset.FromUnixTimeMilliseconds(num).ToUniversalTime();
-                return true;
-            }
-
-            tsUtc = DateTimeOffset.FromUnixTimeSeconds(num).ToUniversalTime();
-            return true;
-        }
-
-        if (DateTimeOffset.TryParse(
-                tsHeader,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                out var iso))
-        {
-            tsUtc = iso.ToUniversalTime();
-            return true;
-        }
-
+    // STRICT: Unix timestamp in SECONDS only
+    if (!long.TryParse(tsHeader, out var seconds))
+    {
         tsUtc = default;
         return false;
     }
+
+    try
+    {
+        tsUtc = DateTimeOffset.FromUnixTimeSeconds(seconds).ToUniversalTime();
+        return true;
+    }
+    catch
+    {
+        tsUtc = default;
+        return false;
+    }
+    }
+
 
     private static bool ConstantTimeEquals(string a, string b)
     {

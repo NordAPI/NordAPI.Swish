@@ -1,6 +1,7 @@
 ﻿using NordAPI.Swish.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using FluentAssertions;
 using NordAPI.Swish.Webhooks;
@@ -10,6 +11,7 @@ namespace NordAPI.Swish.Tests
 {
     /// <summary>
     /// Ensures the verifier accepts alias header names for timestamp/signature/nonce.
+    /// Uses STRICT Unix-seconds timestamp policy.
     /// </summary>
     public class WebhookVerifier_HeaderAliasTests
     {
@@ -18,53 +20,51 @@ namespace NordAPI.Swish.Tests
         /// <summary>
         /// Builds a signed payload tuple containing:
         /// - Body JSON string
-        /// - ISO-8601 timestamp
+        /// - Unix-seconds timestamp
         /// - Nonce
         /// - Base64-encoded HMAC-SHA256 signature
         /// </summary>
-        private static (string Body, string TimestampIso, string Nonce, string SignatureB64)
+        private static (string Body, string TimestampSeconds, string Nonce, string SignatureB64)
             BuildSignedPayload()
         {
             var body   = "{\"id\":\"t-123\",\"amount\":100}";
-            var tsIso  = DateTimeOffset.UtcNow
-                            .ToUniversalTime()
-                            .ToString("o");
+            var tsStr  = DateTimeOffset.UtcNow
+                            .ToUnixTimeSeconds()
+                            .ToString(CultureInfo.InvariantCulture);
             var nonce  = Guid.NewGuid().ToString("N");
 
             // Canonical message format: timestamp\nnonce\nbody
-            var message = $"{tsIso}\n{nonce}\n{body}";
+            var message = $"{tsStr}\n{nonce}\n{body}";
             var key     = Encoding.UTF8.GetBytes(Secret);
             using var hmac = new System.Security.Cryptography.HMACSHA256(key);
             var sigB64  = Convert.ToBase64String(
                             hmac.ComputeHash(
                               Encoding.UTF8.GetBytes(message)));
 
-            return (body, tsIso, nonce, sigB64);
+            return (body, tsStr, nonce, sigB64);
         }
 
         [Fact]
         public void Verify_ShouldPass_WithAliasHeaders()
         {
             // Arrange: create a signed payload
-            var (body, tsIso, nonce, sigB64) = BuildSignedPayload();
+            var (body, tsStr, nonce, sigB64) = BuildSignedPayload();
 
-            // Combine alias headers (used by some clients)
-            // with the official Swish header names.
+            // Combine alias headers with official Swish header names
             var headers = new Dictionary<string, string>(
                               StringComparer.OrdinalIgnoreCase)
             {
                 // Alias header names
-                ["X-Timestamp"] = tsIso,
+                ["X-Timestamp"] = tsStr,
                 ["X-Nonce"]     = nonce,
                 ["X-Signature"] = sigB64,
 
                 // Official Swish header names
-                ["X-Swish-Timestamp"] = tsIso,
+                ["X-Swish-Timestamp"] = tsStr,
                 ["X-Swish-Nonce"]     = nonce,
                 ["X-Swish-Signature"] = sigB64,
             };
 
-            // Use default verifier options
             var verifier = new SwishWebhookVerifier(
                 new SwishWebhookVerifierOptions
                 {
@@ -75,17 +75,12 @@ namespace NordAPI.Swish.Tests
                 new InMemoryNonceStore()
             );
 
-            // Act: verify the request at the current time
+            // Act
             var now    = DateTimeOffset.UtcNow;
             var result = verifier.Verify(body, headers, now);
 
-            // Assert: verification should succeed when alias headers are present
-            result.Success
-                  .Should().BeTrue(result.Reason ?? "ok");
+            // Assert
+            result.Success.Should().BeTrue(result.Reason);
         }
     }
 }
-
-
-
-

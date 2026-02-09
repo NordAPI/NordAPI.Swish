@@ -9,7 +9,7 @@ namespace NordAPI.Swish.Security.Http;
 /// DelegatingHandler that applies HMAC signature + timestamp + nonce for each request.
 /// Canonical: METHOD\nPATH?QUERY\nTIMESTAMP\nNONCE\nBODY
 /// </summary>
-public sealed class HmacSigningHandler : DelegatingHandler
+internal sealed class HmacSigningHandler : DelegatingHandler
 {
     private readonly string _apiKey;
     private readonly string _secret;

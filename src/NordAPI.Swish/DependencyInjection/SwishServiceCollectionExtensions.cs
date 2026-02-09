@@ -7,7 +7,9 @@ using Microsoft.Extensions.Http;
 using NordAPI.Swish.Security.Http;
 
 namespace NordAPI.Swish.DependencyInjection;
-
+/// <summary>
+/// Service collection extensions for registering the Swish client.
+/// </summary>
 public static class SwishServiceCollectionExtensions
 {
     /// <summary>
@@ -48,8 +50,9 @@ public static class SwishServiceCollectionExtensions
                 var h = new SocketsHttpHandler();
                 h.SslOptions.ClientCertificates = new X509CertificateCollection { clientCertificate };
 #if DEBUG
-                // DEV ONLY: relaxed server validation in Debug; NEVER in Release.
+#pragma warning disable S4830 // DEV ONLY: relaxed server validation in Debug; NEVER in Release.
                 h.SslOptions.RemoteCertificateValidationCallback = static (_, _, _, _) => true;
+#pragma warning restore S4830
 #endif
                 return h;
             }

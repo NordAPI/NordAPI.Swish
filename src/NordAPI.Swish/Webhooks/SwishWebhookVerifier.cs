@@ -93,7 +93,7 @@ public sealed class SwishWebhookVerifier
 
         return VerifyResult.Ok();
     }
-
+#pragma warning disable S3267 // Intentional: small header set, explicit loop preferred over LINQ for clarity and predictability
     private static bool TryGetAny(IReadOnlyDictionary<string, string> headers, out string value, params string[] names)
     {
         foreach (var name in names)
@@ -112,7 +112,7 @@ public sealed class SwishWebhookVerifier
         value = "";
         return false;
     }
-
+#pragma warning restore S3267
     private static bool TryParseTimestamp(string tsHeader, out DateTimeOffset tsUtc)
     {
     // STRICT: Unix timestamp in SECONDS only
@@ -155,10 +155,15 @@ public sealed class SwishWebhookVerifier
     /// <param name="Reason">Optional failure reason.</param>
     public readonly record struct VerifyResult(bool Success, string? Reason)
     {
+        /// <summary>
+        /// Creates a successful verification result.
+        /// </summary>
         public static VerifyResult Ok() => new(true, null);
+
+        /// <summary>
+        /// Creates a failed verification result with a reason.
+        /// </summary>
+        /// <param name="reason">A short failure reason.</param>
         public static VerifyResult Fail(string reason) => new(false, reason);
     }
 }
-
-
-

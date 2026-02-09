@@ -21,9 +21,8 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
-  <!-- Release: generate XML docs (IntelliSense) and keep CS1591 suppressed during MVP. -->
+  <!-- Release: generate XML docs (IntelliSense). -->
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <NoWarn>$(NoWarn);1591</NoWarn>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 

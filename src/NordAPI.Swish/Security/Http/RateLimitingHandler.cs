@@ -3,7 +3,7 @@
 /// <summary>
 /// Limits number of concurrent calls and/or minimum time between calls.
 /// </summary>
-public sealed class RateLimitingHandler : DelegatingHandler
+internal sealed class RateLimitingHandler : DelegatingHandler
 {
     private readonly SemaphoreSlim _semaphore;
     private readonly TimeSpan _minDelay;

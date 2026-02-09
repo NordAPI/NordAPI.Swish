@@ -3,7 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using NordAPI.Swish.Webhooks;
 
 namespace NordAPI.Swish.DependencyInjection;
-
+/// <summary>
+/// Service collection extensions for registering Swish webhook verification services.
+/// </summary>
 public static class SwishWebhookServiceCollectionExtensions
 {
     /// <summary>

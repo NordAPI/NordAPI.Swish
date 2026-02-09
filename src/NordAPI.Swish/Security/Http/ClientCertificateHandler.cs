@@ -5,7 +5,7 @@ namespace NordAPI.Swish.Security.Http;
 /// <summary>
 /// HttpClientHandler that attaches a client certificate (mTLS).
 /// </summary>
-public sealed class ClientCertificateHandler : HttpClientHandler
+internal sealed class ClientCertificateHandler : HttpClientHandler
 {
     public ClientCertificateHandler(X509Certificate2 clientCertificate)
     {

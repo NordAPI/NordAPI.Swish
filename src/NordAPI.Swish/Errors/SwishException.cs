@@ -1,41 +1,103 @@
-using System;
 using System.Net;
+using System.Net.Http;
 
 namespace NordAPI.Swish.Errors;
 
+/// <summary>
+/// Base exception type for Swish SDK errors.
+/// </summary>
 public class SwishException : Exception
 {
+    /// <summary>
+    /// The HTTP status code returned by the Swish API, if available.
+    /// </summary>
     public HttpStatusCode? StatusCode { get; }
+
+    /// <summary>
+    /// The raw response body returned by the Swish API, if available.
+    /// </summary>
     public string? ResponseBody { get; }
 
-    public SwishException(string message, HttpStatusCode? statusCode = null, string? responseBody = null, Exception? inner = null)
-        : base(message, inner)
+    /// <summary>
+    /// Creates a new <see cref="SwishException"/>.
+    /// </summary>
+    /// <param name="message">A human-readable error message.</param>
+    /// <param name="statusCode">The HTTP status code, if available.</param>
+    /// <param name="responseBody">The raw response body, if available.</param>
+    /// <param name="innerException">The underlying exception, if any.</param>
+    public SwishException(string message, HttpStatusCode? statusCode = null, string? responseBody = null, Exception? innerException = null)
+        : base(message, innerException)
     {
         StatusCode = statusCode;
         ResponseBody = responseBody;
     }
 }
 
-public class SwishAuthException : SwishException
+/// <summary>
+/// Thrown when the Swish API returns an authentication/authorization error.
+/// </summary>
+public sealed class SwishAuthException : SwishException
 {
-    public SwishAuthException(string message, HttpStatusCode code, string? body = null)
-        : base(message, code, body) { }
+    /// <summary>
+    /// Creates a new <see cref="SwishAuthException"/>.
+    /// </summary>
+    /// <param name="message">A human-readable error message.</param>
+    /// <param name="statusCode">The HTTP status code.</param>
+    /// <param name="responseBody">The raw response body, if available.</param>
+    public SwishAuthException(string message, HttpStatusCode statusCode, string? responseBody = null)
+        : base(message, statusCode, responseBody)
+    {
+    }
 }
 
-public class SwishValidationException : SwishException
+/// <summary>
+/// Thrown when the Swish API returns a validation error (HTTP 400).
+/// </summary>
+public sealed class SwishValidationException : SwishException
 {
-    public SwishValidationException(string message, HttpStatusCode code, string? body = null)
-        : base(message, code, body) { }
+    /// <summary>
+    /// Creates a new <see cref="SwishValidationException"/>.
+    /// </summary>
+    /// <param name="message">A human-readable error message.</param>
+    /// <param name="statusCode">The HTTP status code.</param>
+    /// <param name="responseBody">The raw response body, if available.</param>
+    public SwishValidationException(string message, HttpStatusCode statusCode, string? responseBody = null)
+        : base(message, statusCode, responseBody)
+    {
+    }
 }
 
-public class SwishConflictException : SwishException
+/// <summary>
+/// Thrown when the Swish API returns a conflict error (HTTP 409).
+/// </summary>
+public sealed class SwishConflictException : SwishException
 {
-    public SwishConflictException(string message, HttpStatusCode code, string? body = null)
-        : base(message, code, body) { }
+    /// <summary>
+    /// Creates a new <see cref="SwishConflictException"/>.
+    /// </summary>
+    /// <param name="message">A human-readable error message.</param>
+    /// <param name="statusCode">The HTTP status code.</param>
+    /// <param name="responseBody">The raw response body, if available.</param>
+    public SwishConflictException(string message, HttpStatusCode statusCode, string? responseBody = null)
+        : base(message, statusCode, responseBody)
+    {
+    }
 }
 
-public class SwishTransientException : SwishException
+/// <summary>
+/// Thrown for transient errors where retry may be appropriate.
+/// </summary>
+public sealed class SwishTransientException : SwishException
 {
-    public SwishTransientException(string message, HttpStatusCode? code = null, string? body = null, Exception? inner = null)
-        : base(message, code, body, inner) { }
+    /// <summary>
+    /// Creates a new <see cref="SwishTransientException"/>.
+    /// </summary>
+    /// <param name="message">A human-readable error message.</param>
+    /// <param name="statusCode">The HTTP status code, if available.</param>
+    /// <param name="responseBody">The raw response body, if available.</param>
+    /// <param name="innerException">The underlying exception, if any.</param>
+    public SwishTransientException(string message, HttpStatusCode? statusCode = null, string? responseBody = null, Exception? innerException = null)
+        : base(message, statusCode, responseBody, innerException)
+    {
+    }
 }

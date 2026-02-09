@@ -8,7 +8,7 @@ namespace NordAPI.Swish.Security.Http;
 /// HttpClientHandler that attaches a client certificate (mTLS).
 /// NOTE: Dev mode (skip server certificate validation) is allowed only in DEBUG.
 /// </summary>
-public sealed class MtlsHttpHandler : HttpClientHandler
+internal sealed class MtlsHttpHandler : HttpClientHandler
 {
     public MtlsHttpHandler(X509Certificate2 certificate, bool allowInvalidChainForDev = false)
     {
@@ -25,8 +25,12 @@ public sealed class MtlsHttpHandler : HttpClientHandler
         // Only in local/dev: accept any server certificate (e.g. self-signed/stubs)
         if (allowInvalidChainForDev)
         {
+#if DEBUG
+#pragma warning disable S4830 // DEV ONLY: relaxed server validation in Debug; NEVER in Release.
             ServerCertificateCustomValidationCallback =
                 HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+#pragma warning restore S4830
+#endif
         }
     }
 }

@@ -13,7 +13,7 @@ This is a concise checklist to get a production-ready integration with the NordA
   - `SWISH_SECRET`
 - [ ] (Production) **mTLS certificate** is loaded via secure config (KeyVault/env), never from files in the repo:
   - `SWISH_PFX_PATH` — Absolute path to client certificate (.pfx/.p12)
-  - `SWISH_PFX_PASSWORD` — PFX password (or legacy `SWISH_PFX_PASS`)
+  - `SWISH_PFX_PASSWORD` — PFX password
   - Note: `SWISH_PFX_BASE64` is not used by the SDK currently.
 - [ ] Do **not** commit secrets/certificates. Keep `.gitignore` covering: `*.pfx, *.p12, *.pem, *.key, *.crt, *.cer`.
 

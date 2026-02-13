@@ -64,13 +64,16 @@ public sealed class SwishWebhookVerifier
         if (!TryParseTimestamp(tsStr, out var tsUtc))
             return VerifyResult.Fail(InvalidTimestamp);
 
-        // 5) Clock skew validation
-        var skew = (nowUtc - tsUtc).Duration();
-        if (skew > _opt.AllowedClockSkew)
-            return VerifyResult.Fail(TimestampSkew);
+        // 5) Clock skew + age validation (deterministic reasons)
+        var delta = nowUtc - tsUtc;
 
-        if (nowUtc - tsUtc > _opt.MaxMessageAge)
+        // Too old: only past timestamps can be "too old"
+        if (delta > _opt.MaxMessageAge)
             return VerifyResult.Fail(MessageTooOld);
+
+        // Skew: both future and past drift outside tolerance
+        if (delta.Duration() > _opt.AllowedClockSkew)
+            return VerifyResult.Fail(TimestampSkew);
 
         // 6) Replay protection
         var expires = nowUtc.Add(_opt.MaxMessageAge);

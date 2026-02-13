@@ -132,5 +132,52 @@ namespace NordAPI.Swish.Tests
                   .Should().ContainAny("missing", "signature");
 
         }
+
+        [Fact]
+        public void Verify_ShouldFail_WithMessageTooOld_WhenTimestampIsOlderThanMaxAge()
+        {
+            // Arrange
+            var verifier = CreateVerifier();
+
+            var body   = "{\"id\":\"abc123\",\"amount\":100}";
+            var nowUtc = DateTimeOffset.UtcNow;
+
+            // Older than MaxMessageAge (10 min), also beyond AllowedClockSkew (5 min)
+            var ts      = nowUtc.AddMinutes(-11);
+            var headers = MakeHeaders(Secret, body, ts);
+
+            // Act
+            var result = verifier.Verify(body, headers, nowUtc);
+
+            // Assert
+            result.Success
+                  .Should().BeFalse();
+            result.Reason
+                  .Should().Be("message too old");
+        }
+
+        [Fact]
+        public void Verify_ShouldFail_WithTimestampSkew_WhenTimestampIsInFutureBeyondAllowedSkew()
+        {
+            // Arrange
+            var verifier = CreateVerifier();
+
+            var body   = "{\"id\":\"abc123\",\"amount\":100}";
+            var nowUtc = DateTimeOffset.UtcNow;
+
+            // Future beyond AllowedClockSkew (5 min)
+            var ts      = nowUtc.AddMinutes(6);
+            var headers = MakeHeaders(Secret, body, ts);
+
+            // Act
+            var result = verifier.Verify(body, headers, nowUtc);
+
+            // Assert
+            result.Success
+                  .Should().BeFalse();
+            result.Reason
+                  .Should().Be("timestamp outside tolerated clock skew");
+        }
+
     }
 }

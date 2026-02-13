@@ -41,6 +41,10 @@ public sealed class InMemoryNonceStore : ISwishNonceStore, IDisposable
         {
             var now = DateTimeOffset.UtcNow;
 
+            if (expiresAtUtc <= now)
+                return Task.FromResult(false);
+
+
             if (_entries.TryGetValue(nonce, out var existing))
             {
                 // Still valid -> replay

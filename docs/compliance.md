@@ -33,9 +33,10 @@ The SDK implements a deterministic signing workflow:
 ### 3) Webhook verification (fail-closed)
 Webhook verification is designed to be deterministic and fail-closed:
 - **Startup Validation**: The SDK enforces a strict 15-minute cap on `AllowedClockSkew` and `MaxMessageAge` during service registration. Configurations exceeding this limit will cause the application to fail-fast.
+- **Temporal Hard-lock**: The effective replay/timestamp acceptance window cannot be configured beyond 15 minutes. This cap is enforced before the verifier is registered, preventing permissive production drift.
 - **Signature Verification**: Verified as Base64 HMAC-SHA256 of the canonical string: `"<timestamp>\n<nonce>\n<body>"`.
 - **Constant-Time Comparison**: Signature verification utilizes constant-time equality logic to mitigate side-channel timing attacks.
-- **Time Validation**: Enforced using allowed clock skew and maximum message age, with both values capped at 15 minutes during startup validation.
+- **Time Validation**: Enforced using allowed clock skew and maximum message age within the validated 15-minute hard cap.
 - **Replay Protection**: Nonce reuse is rejected via a consumer-provided nonce store.
 
 ### 4) Idempotency discipline

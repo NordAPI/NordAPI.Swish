@@ -8,7 +8,9 @@ Officiellt NordAPI-bibliotek för Swish-betalningar.
 ![.NET](https://img.shields.io/badge/.NET-8%2B-blueviolet)
 
 > 🇬🇧 English version: [README.md](https://github.com/NordAPI/NordAPI.Swish/blob/main/README.md)
-> ✅ Se även: [Integration Checklist (web)](https://nordapi.net/integration-checklist/) • [Integration Checklist (repo)](./docs/integration-checklist.md)
+> ✅ **Dokumentation**
+> - [Integrationschecklista (Live)](https://nordapi.net/integration-checklist/) – *Rekommenderas för uppdaterade operativa noter (t.ex. callback-baseline + driftsguidance).*
+> - [Säkerhet & Compliance (Repo)](https://github.com/NordAPI/NordAPI.Swish/blob/main/docs/compliance.md) – *Säkerhetsrelevant beteende + ansvarsfördelning för denna SDK-version.*
 
 Ett lättviktigt och säkert .NET SDK för att integrera **Swish-betalningar och återköp** med deterministiska, fail-closed standardval.
 Inkluderar mTLS som är påslaget som standard, valfri HMAC-härdning för webhook-verifiering och hjälpfunktioner för hastighetsbegränsning.
@@ -26,174 +28,294 @@ Inkluderar mTLS som är påslaget som standard, valfri HMAC-härdning för webho
 
 ## Scope
 
-För att hålla SDK:t fokuserat och lätt att granska är gränserna medvetet smala.
+För att hålla SDK:t fokuserat och lätt att granska är gränserna medvetet snäva.
 
 ### Inom scope
 - **mTLS för Swish API-kommunikation**
 - **Deterministisk HMAC-SHA256-signering och webhook-verifiering**
-- **Spec-låst hantering av säkerhetsrelevanta protokollelement** som timestamps, nonces och canonicalization
-- **Fail-closed-validering av säkerhetskänslig konfiguration** vid applikationsstart
+- **Spec-låst hantering av säkerhetsrelevanta protokollelement** (timestamps i sekunder, nonces, canonicalization)
+- **Fail-closed-validering av säkerhetskänslig konfiguration** under applikationsstart
 
 ### Utanför scope
-- **Secret management** i din miljö (generering, lagring, rotation)
-- **Infrastruktur-säkerhet** såsom WAF, brandväggar och IDS/IPS
-- **Persistensimplementation** för nonce-lagring (till exempel Redis eller SQL)
+- **Hantering av hemligheter** (generering, lagring, rotation)
+- **Infrastruktursäkerhet** (WAF, brandväggar, IDS/IPS)
+- **Persistensimplementation** för nonce-lagring (Redis/SQL-setup)
 - **Merchant onboarding, avtal och extern tillgänglighet i Swish-plattformen**
 
 ---
 
 ## 📚 Innehållsförteckning
 - [🚀 Funktioner](#-funktioner)
-- [⚡ Snabbstart (ASP.NET Core)](#-snabbstart-aspnet-core)
-- [🔐 mTLS via miljövariabler (krävs som standard)](#-mtls-via-miljövariabler-krävs-som-standard)
-- [🧪 Starta & röktesta](#-starta--röktesta)
-- [🌐 Vanliga miljövariabler](#-vanliga-miljövariabler)
-- [🧰 Felsökning](#-felsökning)
-- [🚦 Go live-checklista (kund)](#-go-live-checklista-kund)
-- [🧩 ASP.NET Core-integration](#-aspnet-core-integration-skärpt-validering)
-- [🛠️ Snabba utvecklingskommandon](#️-snabba-utvecklingskommandon)
-- [⏱️ HTTP-timeout & återförsök](#️-http-timeout--återförsök-namngiven-klient-swish)
+- [📦 Krav](#-krav)
+- [⬇️ Installation](#️-installation)
+- [⚡ Snabbstart — Minimal Program.cs](#-snabbstart--minimal-programcs)
+- [💳 Exempel på användning: Skapa en betalning](#-exempel-på-användning-skapa-en-betalning)
+- [🧭 Typiskt Swish-flöde (översikt)](#-typiskt-swish-flöde-översikt)
+- [🧰 Konfiguration — Miljövariabler & User-Secrets](#-konfiguration--miljövariabler--user-secrets)
+- [🔐 mTLS (krävs som standard)](#-mtls-krävs-som-standard)
+- [🧪 Köra samples och tester](#-köra-samples-och-tester)
+- [🧾 Webhook-röktest](#-webhook-röktest)
+- [🧩 API-översikt (Signaturer & Modeller)](#-api-översikt-signaturer--modeller)
+- [⏱️ Felscenarier & Retry-policy](#-felscenarier--retry-policy)
+- [❓ FAQ](#-faq)
 - [💬 Få hjälp](#-få-hjälp)
-- [🛡️ Security Disclosure](#️-security-disclosure)
-- [📦 Licens](#-licens)
+- [🚨 Rapportera säkerhetsbrister](#-rapportera-säkerhetsbrister)
+- [🛠️ Bidra](#️-bidra)
+- [📦 Release & Versionering](#-release--versionering)
+- [📜 Licens](#-licens)
 
 ---
 
 ## 🚀 Funktioner
-- ✅ Skapa och verifiera Swish-betalningar
-- 🔁 Stöd för återköp
-- 🔐 HMAC + mTLS-stöd
-- 📉 Hastighetsbegränsning
-- 🧪 ASP.NET Core-integration
-- 🧰 Miljövariabelhantering
+- ✅ **Skapa och verifiera Swish-betalningar**
+- 🔁 **Stöd för återköp (Refunds)**
+- 🔐 **mTLS-driven transport och valfri webhook-härdning**
+- ⏱️ **Deterministisk retry- och timeout-logik**
+- 🧪 **ASP.NET Core-integration** (fluent registration)
+- 🧰 **Konfiguration via miljövariabler** (User-Secrets & Vault-ready)
 
 ---
 
-## ⚡ Snabbstart (ASP.NET Core)
+## 📦 Krav
+- **.NET 8+** (SDK och Runtime)
+- Windows / macOS / Linux
+- *(Valfritt)* Redis om du vill ha distribuerat replay-skydd för webhooks
 
-Med detta SDK får du en fungerande Swish-klient på bara några minuter:
+---
 
-- **HttpClientFactory** för att konfigurera HTTP-pipelinen (HMAC, rate limiting, mTLS)
-- **Valfri NordAPI Security Hardening (HMAC-signering)** för utgående requests (inte Swish-officiellt)
-- **mTLS (krävs som standard)** via miljövariabler — strikt kedja i Release; avslappnad endast i Debug (lokalt)
-- **Webhook-verifiering (valfri hardening)** med replay-skydd (nonce-store). Swish skickar inte `X-Swish-*` signatur-headers som standard.
-- **Intern retry/backoff** för transienta fel (endast ett retry-lager; Idempotency-Key återanvänds per operation)
+## ⬇️ Installation
 
-### 1) Installera / referera
+Installera via NuGet:
+
 ```powershell
 dotnet add package NordAPI.Swish
 ```
 
-Eller lägg till en projektreferens:
+Eller via `PackageReference` i `.csproj`:
+
 ```xml
 <ItemGroup>
-  <ProjectReference Include="..\src\NordAPI.Swish\NordAPI.Swish.csproj" />
+  <PackageReference Include="NordAPI.Swish" />
 </ItemGroup>
 ```
 
-### 2) Registrera klienten i *Program.cs*
+> Tips: utelämna fast version för att hämta senaste stabila. Pinna en specifik version i produktion.
+
+---
+
+## ⚡ Snabbstart — Minimal Program.cs
+
+> Denna kod är **körbar** som en komplett fil i ett nytt `web`-projekt (`dotnet new web`).
+> Fil: `Program.cs`
+
 ```csharp
+using System;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NordAPI.Swish;
 using NordAPI.Swish.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Registrera Swish-klienten via miljövariabler
+// OBS (Snabbstart): använder enkla dev-fallbacks; i produktion, använd secrets och ta bort fallbacks.
 builder.Services.AddSwishClient(opts =>
 {
     opts.BaseAddress = new Uri(Environment.GetEnvironmentVariable("SWISH_BASE_URL")
-        ?? throw new InvalidOperationException("Saknar SWISH_BASE_URL"));
+        ?? "https://example.invalid");
     opts.ApiKey = Environment.GetEnvironmentVariable("SWISH_API_KEY")
-        ?? throw new InvalidOperationException("Saknar SWISH_API_KEY");
+        ?? "dev-key";
     opts.Secret = Environment.GetEnvironmentVariable("SWISH_SECRET")
-        ?? throw new InvalidOperationException("Saknar SWISH_SECRET");
+        ?? "dev-secret";
 });
 
 var app = builder.Build();
 
-app.MapGet("/ping", async (ISwishClient swish) => await swish.PingAsync());
-app.Run();
+app.MapGet("/ping", async (ISwishClient swish) =>
+{
+    var result = await swish.PingAsync();
+    return Results.Ok(new { ping = result });
+});
 
+app.Run();
 ```
 
-### 3) Använd i din kod
-```csharp
-[ApiController]
-[Route("[controller]")]
-public class PaymentsController : ControllerBase
-{
-  private readonly ISwishClient _swish;
-
-  public PaymentsController(ISwishClient swish)
-  {
-    _swish = swish;
-  }
-
-  [HttpPost("pay")]
-  public async Task<IActionResult> Pay()
-  {
-    var create = new CreatePaymentRequest(
-      PayerAlias: "46701234567",
-      PayeeAlias: "1231181189",
-      Amount: "100.00",
-      Currency: "SEK",
-      Message: "Testköp",
-      CallbackUrl: "https://yourdomain.test/webhook/swish"
-    );
-
-    var payment = await _swish.CreatePaymentAsync(create);
-    return Ok(payment);
-  }
-}
+Kör:
+```powershell
+dotnet new web -n SwishQuickStart
+cd SwishQuickStart
+dotnet add package NordAPI.Swish
+# Ersätt innehållet i Program.cs
+dotnet run
 ```
 
 ---
 
-## 🔐 mTLS via miljövariabler (krävs som standard)
+## 💳 Exempel på användning: Skapa en betalning
 
-Aktivera mTLS med klientcertifikat (PFX):
+> Ersätt `payeeAlias` med **ditt** Swish-handlarnummer (MSISDN utan “+”). Signaturer och modellnamn matchar API-översikten nedan.
 
-- `SWISH_PFX_PATH` — sökväg till `.pfx`
-- `SWISH_PFX_PASSWORD` — lösenord till certifikatet
-- legacy fallback: `SWISH_PFX_PASS` (om `SWISH_PFX_PASSWORD` inte är satt)
+```csharp
+using Microsoft.AspNetCore.Mvc;
 
-**Beteende:**
-- Som standard kräver SDK:t mTLS.
-- Om `RequireMtls = true` (standard) och inget klientcertifikat kan hittas, kastar SDK:t `SwishConfigurationException` när HTTP-handlern skapas.
-- Sätt `RequireMtls = false` endast för kontrollerad lokal testning/mock där mTLS medvetet inte används.
-- **Debug:** avslappnad servercert-validering (endast lokalt).
-- **Release:** strikt certkedja (ingen "allow invalid chain").
+// Minimal API-endpoint som skapar en betalning via SDK-modellen
+app.MapPost("/payments", async ([FromBody] CreatePaymentRequest input, ISwishClient swish, CancellationToken ct) =>
+{
+    // Tips: validera Amount/Currency/alias innan anrop till Swish
+    var payment = await swish.CreatePaymentAsync(input, ct);
+    return Results.Ok(payment);
+});
+```
 
-**Exempel (PowerShell):**
+**Exempel på request body**
+```json
+{
+  "payerAlias": "46701234567",
+  "payeeAlias": "1231181189",
+  "amount": "100.00",
+  "currency": "SEK",
+  "message": "Testköp",
+  "callbackUrl": "https://yourdomain.test/webhook/swish"
+}
+```
+
+**curl**
+```bash
+curl -v -X POST http://localhost:5000/payments \
+  -H "Content-Type: application/json" \
+  --data-raw '{
+    "payerAlias": "46701234567",
+    "payeeAlias": "1231181189",
+    "amount": "100.00",
+    "currency": "SEK",
+    "message": "Testköp",
+    "callbackUrl": "https://yourdomain.test/webhook/swish"
+  }'
+```
+
+> I produktion är flödet **asynkront**: Swish notifierar din backend via webhook (`callbackUrl`). Se röktestet för signaturdetaljer.
+
+---
+
+## 🧭 Typiskt Swish-flöde (översikt)
+
+```
+1) Klient (webb/app)
+        |
+        v
+2) Din backend
+        |
+        v
+3) Swish API
+        |
+        v
+4) Användaren godkänner betalning i Swish-appen
+        |
+        v
+5) Swish skickar callback (betalningsresultat)
+        |
+        v
+6) Din Webhook-endpoint
+        |
+        v
+   Uppdatera orderstatus / notifiera klient
+```
+
+- Din backend skapar betalningen via `CreatePaymentAsync`.
+- Slutanvändaren godkänner i Swish-appen.
+- Swish POST:ar resultatet till din **webhook** (`callbackUrl`).
+
+> Obs: Swish skickar inte dessa `X-Swish-*` headers som standard. Det här är NordAPI:s valfria webhook-hardening-mönster (du lägger det vid din edge).
+
+Din webhook måste verifiera HMAC (`X-Swish-Signature`) som **Base64** HMAC-SHA256 av `"<ts>\n<nonce>\n<body>"` (UTF-8).
+
+---
+
+## 🧰 Konfiguration — Miljövariabler & User-Secrets
+
+| Variabel               | Syfte                                        | Exempel                         |
+|------------------------|----------------------------------------------|----------------------------------|
+| `SWISH_BASE_URL`       | Bas-URL för Swish API                        | `https://example.invalid`        |
+| `SWISH_API_KEY`        | API-nyckel för HMAC                          | `dev-key`                        |
+| `SWISH_SECRET`         | Delad hemlighet för HMAC                     | `dev-secret`                     |
+| `SWISH_PFX_PATH`       | Sökväg till klientcertifikat (.pfx)          | `C:\certs\swish-client.pfx`      |
+| `SWISH_PFX_PASSWORD`   | Lösenord för certifikatet                    | `••••`                           |
+| `SWISH_WEBHOOK_SECRET` | Hemlighet för webhook-HMAC                   | `dev_secret`                     |
+| `SWISH_REDIS`          | Redis-anslutningssträng (nonce-store)        | `localhost:6379`                 |
+| `SWISH_DEBUG`          | (DEV ONLY) Debug / relaxed dev behavior      | `1`                              |
+| `SWISH_ALLOW_OLD_TS`   | (DEV ONLY) Tillåt gamla webhook-timestamps   | `1`                              |
+
+> ⚠️ **ENDAST DEV:** `SWISH_DEBUG` och `SWISH_ALLOW_OLD_TS` får aldrig vara aktiverade i produktion.
+
+Sätt med **User-Secrets** (exempel):
+```powershell
+dotnet user-secrets init
+dotnet user-secrets set "SWISH_API_KEY" "dev-key"
+dotnet user-secrets set "SWISH_SECRET" "dev-secret"
+dotnet user-secrets set "SWISH_BASE_URL" "https://example.invalid"
+```
+
+> 🔒 Commita aldrig hemligheter eller certifikat. Använd miljövariabler, User-Secrets eller ett valv (t.ex. Azure Key Vault).
+
+---
+
+## 🔐 mTLS (krävs som standard)
+
+Aktivera klientcertifikat (PFX):
 ```powershell
 $env:SWISH_PFX_PATH = "C:\certs\swish-client.pfx"
 $env:SWISH_PFX_PASSWORD = "hemligt-lösenord"
 ```
 
-> 🔒 I produktion ska certifikat och hemligheter lagras i **Azure Key Vault** eller liknande — aldrig i repo.
+**Beteende**
+- Som standard kräver SDK:t mTLS.
+- Om `RequireMtls = true` (standard) och certifikat saknas kastar SDK:t `SwishConfigurationException` när HTTP-handlern skapas.
+- Sätt `RequireMtls = false` endast för kontrollerad lokal testning/mock där mTLS medvetet inte används.
+- **Debug:** avslappnad servercertifikatvalidering (endast lokalt).
+- **Release:** strikt certkedja (ingen "allow invalid chain").
 
 ---
 
-## 🧪 Starta & röktesta
+## 🧪 Köra samples och tester
 
-Starta sample-appen (port 5000) med webhook-hemligheten:
+```powershell
+# Bygg hela repot
+dotnet restore
+dotnet build
+
+# Kör sample-webbappen
+dotnet run --project .\samples\SwishSample.Web\SwishSample.Web.csproj --urls http://localhost:5000
+
+# Kör tester
+dotnet test
+```
+
+---
+
+## 🧾 Webhook-röktest
+
+Starta sample-servern i en terminal:
 ```powershell
 $env:SWISH_WEBHOOK_SECRET = "dev_secret"
 dotnet run --project .\samples\SwishSample.Web\SwishSample.Web.csproj --urls http://localhost:5000
 ```
 
-Kör sedan i ett nytt PowerShell-fönster:
+Kör röktestet i en annan terminal:
 ```powershell
 .\scripts\smoke-webhook.ps1 -Secret dev_secret -Url http://localhost:5000/webhook/swish
 ```
 
 För snabb manuell testning kan du även POST:a webhooken med **curl** (bash/macOS/Linux).
-**Signatur-spec:** HMAC-SHA256 över den kanoniska strängen **`"<timestamp>\n<nonce>\n<body>"`**, med **`SWISH_WEBHOOK_SECRET`** som nyckel. Kodas som **Base64**.
+**Signatur-spec:** HMAC-SHA256 över den kanoniska strängen `"<timestamp>\n<nonce>\n<body>"`, med `SWISH_WEBHOOK_SECRET`. Kodas som **Base64**.
+
+> 🧩 **Notis:** Signera exakt UTF-8-bytes från den råa request body:n. All whitespace/prettifying kan bryta signaturverifieringen.
 
 ### Obligatoriska headers
-| Header              | Beskrivning                                     | Exempelvärde                          |
-|---------------------|--------------------------------------------------|---------------------------------------|
-| `X-Swish-Timestamp` | Unix-timestamp i **sekunder**                   | `1735589201`                          |
-| `X-Swish-Nonce`     | Unikt ID för replay-skydd                       | `550e8400-e29b-41d4-a716-446655440000` |
+| Header              | Beskrivning                                         | Exempel                                |
+|---------------------|-----------------------------------------------------|----------------------------------------|
+| `X-Swish-Timestamp` | Unix-timestamp i **sekunder**                       | `1735589201`                           |
+| `X-Swish-Nonce`     | Unikt ID för att förhindra replay                   | `550e8400-e29b-41d4-a716-446655440000` |
 | `X-Swish-Signature` | **Base64** HMAC-SHA256 av `"<ts>\n<nonce>\n<body>"` | `W9CzL8f...==`                         |
 
 ### Exempel på webhook-payload
@@ -201,19 +323,19 @@ För snabb manuell testning kan du även POST:a webhooken med **curl** (bash/mac
 {
   "event": "payment_received",
   "paymentId": "pay_123456",
-  "amount": 100.00,
+  "amount": "100.00",
   "currency": "SEK",
   "payer": { "phone": "46701234567" },
   "metadata": { "orderId": "order_987" }
 }
 ```
 
-### curl röktest (bash / macOS / Linux)
+### curl-röktest (bash / macOS / Linux)
 ```bash
 # 1) Förbered värden
 ts="$(date +%s)"
 nonce="$(uuidgen)"
-body='{"event":"payment_received","paymentId":"pay_123456","amount":100.00,"currency":"SEK","payer":{"phone":"46701234567"},"metadata":{"orderId":"order_987"}}'
+body='{"event":"payment_received","paymentId":"pay_123456","amount":"100.00","currency":"SEK","payer":{"phone":"46701234567"},"metadata":{"orderId":"order_987"}}'
 
 # 2) Beräkna kanonisk sträng och Base64-signatur (använder SWISH_WEBHOOK_SECRET)
 canonical="$(printf "%s\n%s\n%s" "$ts" "$nonce" "$body")"
@@ -228,14 +350,12 @@ curl -v -X POST "http://localhost:5000/webhook/swish" \
   --data-raw "$body"
 ```
 
-> Tips för Windows: PowerShell-användare kan köra det medföljande skriptet eller `Invoke-RestMethod`. Se till att du beräknar **Base64-HMAC** över `"<ts>\n<nonce>\n<body>"` och sätter `X-Swish-Signature` korrekt.
-
-✅ **Förväntat (Success)**
+✅ **Förväntat (HTTP 200)**
 ```json
 {"received": true}
 ```
 
-❌ **Förväntat vid replay (Error)**
+❌ **Förväntat vid replay (HTTP 409)**
 ```json
 {"reason": "replay upptäckt (nonce sedd tidigare)"}
 ```
@@ -244,150 +364,119 @@ curl -v -X POST "http://localhost:5000/webhook/swish" \
 
 ---
 
-## 🌐 Vanliga miljövariabler
+## 🧩 API-översikt (Signaturer & Modeller)
 
-| Variabel             | Syfte                                      | Exempel                      |
-|----------------------|--------------------------------------------|------------------------------|
-| SWISH_BASE_URL       | Bas-URL till Swish API                     | https://example.invalid      |
-| SWISH_API_KEY        | API-nyckel för HMAC                        | dev-key                      |
-| SWISH_SECRET         | Hemlighet för HMAC                         | dev-secret                   |
-| SWISH_PFX_PATH       | Sökväg till klientcertifikat (.pfx)        | C:\certs\swish-client.pfx  |
-| SWISH_PFX_PASSWORD   | Lösenord till klientcertifikat             | ••••                         |
-| SWISH_WEBHOOK_SECRET | Hemlighet för webhook-HMAC                 | dev_secret                   |
-| SWISH_REDIS          | Redis-anslutningssträng (nonce-store)      | localhost:6379               |
-| SWISH_DEBUG          | Verbosare loggning / lättare verifiering   | 1                            |
-| SWISH_ALLOW_OLD_TS   | Tillåt äldre timestamps vid verifiering    | 1 (endast dev)               |
-
-> 💡 Hårdkoda aldrig hemligheter. Använd miljövariabler, Secret Manager eller GitHub Actions Secrets.
-
----
-
-## 🧰 Felsökning
-
-- **404 / Connection refused:** Kontrollera att appen lyssnar på rätt URL och port (`--urls`).
-- **mTLS-fel:** Kontrollera `SWISH_PFX_PATH` + `SWISH_PFX_PASSWORD` och att certifikatet är giltigt.
-- **Replay nekas alltid:** Rensa in-memory/Redis nonce-store eller använd en ny nonce vid test.
-
----
-
-## 🚦 Go live-checklista (kund)
-
-Använd den här checklistan innan du kör mot riktiga Swish/BankID-miljöer.
-
-### Certifikat och hemligheter
-- Använd **egna** produktionsavtal och certifikat (mTLS) från bank/leverantör.
-- Commita aldrig certifikat eller hemligheter i repo.
-- Lagra hemligheter i miljövariabler, en secret manager (t.ex. Azure Key Vault) eller plattformens secret store.
-- Rotera hemligheter regelbundet och direkt vid misstanke om läcka.
-
-### HTTPS och transportskydd
-- Kör **endast HTTPS** för webhook-endpoints (överväg HSTS vid edge).
-- Om du terminerar TLS i en reverse proxy: lås ner och lita på interna hopp.
-
-### Webhook-verifiering (krävs för detta hardening-lager)
-> Obs: Swish skickar inte dessa `X-Swish-*` headers som standard. Det här är NordAPI:s valfria webhook-hardening-mönster (du lägger det vid din edge).
-- Kräv dessa headers:
-  - `X-Swish-Timestamp` (Unix-tid i **sekunder**)
-  - `X-Swish-Nonce`
-  - `X-Swish-Signature` (Base64 HMAC-SHA256)
-- Verifiera signaturen över den kanoniska strängen: `"<timestamp>\n<nonce>\n<body>"` med `SWISH_WEBHOOK_SECRET`.
-- Neka requests utanför tillåtet tidsfönster (rekommendation: **±5 minuter**).
-- Kör **anti-replay** med persistenta nonces (Redis/DB). Använd **inte** in-memory nonce-store i produktion.
-
-Valfritt (distribuerat): För produktion över flera instanser, se docs/optional/redis-nonce-store.md för delat nonce-state (replay protection).
-
-### Drift-härdning
-- Stäng av alla debug-relaxations i produktion (undvik t.ex. att tillåta gamla timestamps).
-- Lägg på rate limiting och strukturerad loggning (undvik PII i loggar).
-- Bevaka verifieringsfel (signatur mismatch, tidsdrift, replay) och larma vid avvikelser.
-
----
-
-## 🧩 ASP.NET Core-integration (skärpt validering)
+> Typerna nedan illustrerar den förväntade ytan. Namn/namespaces ska matcha biblioteket du refererar till.
 
 ```csharp
-using NordAPI.Swish;
-using NordAPI.Swish.DependencyInjection;
-
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddSwishClient(opts =>
+public interface ISwishClient
 {
-    opts.BaseAddress = new Uri(Environment.GetEnvironmentVariable("SWISH_BASE_URL")
-        ?? throw new InvalidOperationException("Saknar SWISH_BASE_URL"));
-    opts.ApiKey = Environment.GetEnvironmentVariable("SWISH_API_KEY")
-        ?? throw new InvalidOperationException("Saknar SWISH_API_KEY");
-    opts.Secret = Environment.GetEnvironmentVariable("SWISH_SECRET")
-        ?? throw new InvalidOperationException("Saknar SWISH_SECRET");
-});
+    Task<string> PingAsync(CancellationToken ct = default);
 
-var app = builder.Build();
+    Task<CreatePaymentResponse> CreatePaymentAsync(CreatePaymentRequest request, CancellationToken ct = default);
+    Task<CreatePaymentResponse> GetPaymentStatusAsync(string paymentId, CancellationToken ct = default);
 
-app.MapGet("/ping", async (ISwishClient swish) => await swish.PingAsync());
-app.Run();
+    Task<CreateRefundResponse> CreateRefundAsync(CreateRefundRequest request, CancellationToken ct = default);
+    Task<CreateRefundResponse> GetRefundStatusAsync(string refundId, CancellationToken ct = default);
+}
+
+public sealed record CreatePaymentRequest(
+    string PayerAlias,
+    string PayeeAlias,
+    string Amount,
+    string Currency,
+    string Message,
+    string CallbackUrl
+);
+
+public sealed record CreatePaymentResponse(
+    string Id,
+    string Status,
+    string? ErrorCode = null,
+    string? ErrorMessage = null
+);
+
+public sealed record CreateRefundRequest(
+    string OriginalPaymentReference,
+    string Amount,
+    string Currency,
+    string Message,
+    string CallbackUrl
+);
+
+public sealed record CreateRefundResponse(
+    string Id,
+    string Status,
+    string? ErrorCode = null,
+    string? ErrorMessage = null
+);
 ```
 
 ---
 
-## 🛠️ Snabba utvecklingskommandon
+## ⏱️ Felscenarier & Retry-policy
 
-**Bygg & test**
-```powershell
-dotnet build
-dotnet test
-```
+SDK:t gör retry internt i `SwishClient`.
 
-**Kör sample (utveckling)**
-```powershell
-dotnet watch --project .\samples\SwishSample.Web\SwishSample.Web.csproj run
-```
+- **Timeout:** 30 sekunder (HttpClient timeout som standard)
+- **Retry:** upp till 3 försök med exponentiell backoff + jitter på:
+  - `408`
+  - `429`
+  - `5xx`
+  - `HttpRequestException`
+  - `TaskCanceledException` (timeout)
+
+Retry är deterministisk och gäller per operation.
+Idempotency-Key genereras en gång per operation och återanvänds för alla retry-försök.
+
+Om du registrerar en egen `HttpClient`, se till att du inte lägger till ett extra retry-lager om det inte är avsiktligt.
+
+Vanliga svar:
+- **400 Bad Request** → valideringsfel (kontrollera obligatoriska fält).
+- **401 Unauthorized** → ogiltig `SWISH_API_KEY`/`SWISH_SECRET` eller saknade headers.
+- **429 Too Many Requests** → hanteras av den interna retry-mekanismen.
+- **5xx** → transient; hanteras av den interna retry-mekanismen.
 
 ---
 
-## ⏱️ HTTP-timeout & återförsök (namngiven klient "Swish")
-
-SDK:t tillhandahåller en **opt-in** namngiven `HttpClient` **"Swish"** med:
-- **Timeout:** 30 sekunder
-- **Återförsökspolicy:** upp till 3 försök med exponentiell backoff + jitter
-  (på statuskoder 408, 429, 5xx, samt `HttpRequestException` och `TaskCanceledException`)
-
-**Aktivera:**
-```csharp
-services.AddSwishMtlsTransport(); // registrerar "Swish" (HTTP-pipeline + mTLS om miljövariabler finns)
-```
-
-**Utöka eller ersätt:**
-```csharp
-services.AddSwishMtlsTransport();
-services.AddHttpClient("Swish")
-        .AddHttpMessageHandler(_ => new MyCustomHandler()); // ligger utanför SDK:ns HTTP-pipeline
-```
-
-**Avaktivera:**
-- Anropa inte `AddSwishMtlsTransport()` om du inte vill anpassa SDK:ns HTTP-pipeline.
-- Eller registrera om `"Swish"` manuellt för att ersätta eller utöka handlers och inställningar.
+## ❓ FAQ
+- **401 i tester** — Kontrollera `SWISH_API_KEY`/`SWISH_SECRET` och se till att din klocka är synkroniserad.
+- **Replay nekas alltid** — Byt `nonce` mellan anrop och rensa in-memory/Redis. Kontrollera `SWISH_REDIS`.
+- **mTLS-fel i produktion** — Verifiera `SWISH_PFX_PATH` + `SWISH_PFX_PASSWORD` och certifikatkedjan. Om `RequireMtls = true` (standard) och inget certifikat kan hittas kastar SDK:t `SwishConfigurationException`.
+- **Startup-fel** — SDK:t tillämpar en strikt maxgräns på 15 minuter för både klockdiff (`AllowedClockSkew`) och meddelandeålder (`MaxMessageAge`) vid validering under applikationsstart av säkerhetsskäl.
 
 ---
 
 ## 💬 Få hjälp
-
-- 💬 Frågor / feedback: använd [GitHub Discussions](https://github.com/NordAPI/NordAPI.Swish/discussions) (inga secrets/PII).
-- 🐛 Buggar / feature requests: öppna ett [GitHub Issue](https://github.com/NordAPI/NordAPI.Swish/issues).
-- 🔒 Säkerhetsärenden: e-posta [security@nordapi.com](mailto:security@nordapi.com) (öppna inte publika issues/discussions).
-- Säkerhet & compliance: se [docs/compliance.md](docs/compliance.md).
-
----
-
-## 🛡️ Security Disclosure
-
-Om du hittar ett säkerhetsproblem, rapportera det privat via e-post till `security@nordapi.com`.
-Använd **inte** GitHub Issues för säkerhetsärenden.
+- 💬 **Frågor / feedback**: Använd [GitHub Discussions](https://github.com/NordAPI/NordAPI.Swish/discussions).
+- 🐛 **Buggar / önskemål**: Öppna ett [GitHub Issue](https://github.com/NordAPI/NordAPI.Swish/issues).
+- 🔒 **Säkerhetsfrågor**: Mejla [security@nordapi.com](mailto:security@nordapi.com).
+- **Compliance**: Se [Security & Compliance Notes](https://github.com/NordAPI/NordAPI.Swish/blob/main/docs/compliance.md).
 
 ---
 
-## 📦 Licens
+## 🚨 Rapportera säkerhetsbrister
+Om du hittar en säkerhetsbrist, vänligen rapportera den privat till `security@nordapi.com`. Använd **inte** GitHub Issues för säkerhetsrelaterade ärenden.
 
-Detta projekt är licensierat under **MIT-licensen**.
+---
+
+## 🛠️ Bidra
+1. Skapa en feature-branch från `main`.
+2. Verifiera lokalt: `dotnet build`, `dotnet test` och röktest för webhooks.
+3. Säkerställ att README-exemplen kompilerar.
+4. Öppna PR; CI måste gå igenom.
+
+---
+
+## 📦 Release & Versionering
+- **SemVer**: `MAJOR.MINOR.PATCH`.
+- **NuGet**: Filen `PackageReadmeFile` visas på NuGet.org.
+- Installera specifik version: `dotnet add package NordAPI.Swish --version 1.1.4`.
+
+---
+
+## 📜 Licens
+Detta projekt är licensierat under **MIT-licensen**. Säkerhetskontakt: `security@nordapi.com`.
 
 ---
 

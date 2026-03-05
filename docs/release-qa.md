@@ -53,7 +53,12 @@ Production guidance:
 - [ ] Production requires a persistent nonce store (Redis/DB).
 - [ ] Sample behavior in `Production` fails fast if no Redis is configured (if intended).
 - [ ] Env var is standardized: `SWISH_REDIS` (aliases allowed if documented).
+- [ ] Verify `SWISH_REDIS` is honored in `Production` mode (not only in Development/local runs).
+- [ ] Verify documented env var aliases (`REDIS_URL`, `SWISH_REDIS_CONN`) resolve consistently if supported.
 - [ ] Validate TTL behavior (nonce lives at least the allowed timestamp window).
+- [ ] Verify production startup behavior with and without Redis configured:
+  - with `ASPNETCORE_ENVIRONMENT=Production` and valid `SWISH_REDIS` → app starts
+  - with `ASPNETCORE_ENVIRONMENT=Production` and no Redis → sample/app fails fast if that behavior is intended
 
 ---
 

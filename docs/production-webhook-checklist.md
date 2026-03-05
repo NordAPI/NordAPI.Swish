@@ -4,7 +4,7 @@ This checklist covers production-grade requirements for receiving Swish callback
 
 > **Important (Swish baseline):** The official Swish Merchant Integration Guide requires callback delivery over **HTTPS on port 443**.
 > Swish validates your callback server TLS certificate against commonly recognized CAs, recommends **IP filtering**, and notes that callback does **not** support SNI.
-> The official guide does not describe Swish-sent HMAC signature headers; the `X-Swish-*` header checks below apply **only if you add an optional signing layer** (e.g., an internal proxy/gateway or local hardening) on top of Swish callbacks.
+> The official guide does not describe Swish-sent HMAC signature headers. The `X-Swish-*` checks below are **NordAPI-specific optional hardening** and apply only if you place an explicit signing layer (for example an internal proxy, gateway, or local hardening tool) in front of Swish callbacks.
 
 
 ## Transport & endpoint
@@ -17,6 +17,7 @@ This checklist covers production-grade requirements for receiving Swish callback
 - [ ] Set a reasonable max request body size to avoid abuse.
 
 ## Optional signing headers (only if you enable an extra signing layer)
+> **NordAPI hardening only:** These `X-Swish-*` headers are not part of the official Swish callback baseline. Use them only if you add an explicit signing layer (for example an internal proxy, gateway, or local hardening tool) in front of the webhook handler.
 - [ ] `X-Swish-Timestamp` — Unix timestamp in **seconds** (integer).
 - [ ] `X-Swish-Nonce` — unique value per request (UUID recommended).
 - [ ] `X-Swish-Signature` — **Base64** HMAC-SHA256 signature.

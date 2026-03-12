@@ -1,4 +1,4 @@
-﻿# NordAPI Swish SDK — Integration Checklist (v1.1.4)
+﻿# NordAPI Swish SDK — Integration Checklist (v1.1.6)
 
 This is a concise checklist to ensure a production-ready, secure integration with the NordAPI Swish SDK. Verify each box before deployment.
 

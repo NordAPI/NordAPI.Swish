@@ -486,7 +486,7 @@ Om du hittar en säkerhetsbrist, vänligen rapportera den privat till `security@
 ## 📦 Release & Versionering
 - **SemVer**: `MAJOR.MINOR.PATCH`.
 - **NuGet**: Filen `PackageReadmeFile` visas på NuGet.org.
-- Installera specifik version: `dotnet add package NordAPI.Swish --version 1.1.4`.
+- Installera specifik version: `dotnet add package NordAPI.Swish --version 1.1.6`.
 
 ---
 
